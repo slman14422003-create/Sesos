@@ -29,7 +29,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 info = Engine.analyze(u)
             } catch (t: Throwable) {
-                error = "تعذّر تحليل الرابط: " + (t.message ?: "").take(200)
+                val m = (t.message ?: "")
+                val needLogin = Regex("login|cookies|rate-limit|sign in", RegexOption.IGNORE_CASE).containsMatchIn(m)
+                error = "تعذّر تحليل الرابط: " + m.take(200) +
+                    if (needLogin) "\n\nجرّب قسم «الحسابات» أدناه وسجّل دخولك لهذا الموقع." else ""
             } finally {
                 loading = false
             }

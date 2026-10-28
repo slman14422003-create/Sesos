@@ -2,6 +2,9 @@ package com.sesos.app.ui
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,6 +31,15 @@ fun SesosScreen(vm: MainViewModel) {
     val items by DownloadCenter.items.collectAsStateWithLifecycle()
     val engine by Engine.state.collectAsStateWithLifecycle()
     val snack = remember { SnackbarHostState() }
+    val sessions by CookieStore.sessions.collectAsStateWithLifecycle()
+    var importSite by remember { mutableStateOf<Site?>(null) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val site = importSite
+        if (uri != null && site != null) {
+            val ok = try { CookieStore.importFile(ctx, site, uri) } catch (_: Exception) { false }
+            Toast.makeText(ctx, if (ok) "تم استيراد الجلسة" else "الملف لا يحتوي جلسة ${site.label}", Toast.LENGTH_LONG).show()
+        }
+    }
 
     LaunchedEffect(vm.message) {
         vm.message?.let { snack.showSnackbar(it); vm.message = null }
@@ -73,6 +85,15 @@ fun SesosScreen(vm: MainViewModel) {
                 }
 
                 vm.info?.let { info -> item { InfoCard(info, vm) } }
+
+                item {
+                    AccountsCard(
+                        sessions = sessions,
+                        onLogin = { site -> ctx.startActivity(Intent(ctx, LoginActivity::class.java).putExtra("site", site.name)) },
+                        onImport = { site -> importSite = site; picker.launch(arrayOf("*/*")) },
+                        onLogout = { site -> CookieStore.logout(site) }
+                    )
+                }
 
                 if (items.isNotEmpty()) item { Text("التنزيلات", style = MaterialTheme.typography.titleMedium) }
                 items(items, key = { it.id }) { d -> DownloadRow(d) { ctx.open(d) } }
@@ -165,4 +186,38 @@ private fun android.content.Context.open(d: DownloadItem) {
     val i = Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(uri), d.mime)
         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
     try { startActivity(i) } catch (_: Exception) {}
+}
+
+
+@Composable
+private fun AccountsCard(
+    sessions: Set<String>,
+    onLogin: (Site) -> Unit,
+    onImport: (Site) -> Unit,
+    onLogout: (Site) -> Unit
+) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("الحسابات", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "تسجيل الدخول اختياري، ويلزم فقط عند ظهور رسالة login required. الجلسة تُحفظ داخل التطبيق ولا تُرسل لأي جهة. يُفضّل استخدام حساب ثانوي.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Site.entries.forEach { site ->
+                val on = site.id in sessions
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.weight(1f)) {
+                        Text(site.label)
+                        Text(if (on) "مسجّل ✓" else "غير مسجّل", style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (on) {
+                        TextButton(onClick = { onLogout(site) }) { Text("خروج وحذف") }
+                    } else {
+                        TextButton(onClick = { onImport(site) }) { Text("استيراد") }
+                        Button(onClick = { onLogin(site) }, contentPadding = PaddingValues(horizontal = 12.dp)) { Text("دخول") }
+                    }
+                }
+            }
+        }
+    }
 }

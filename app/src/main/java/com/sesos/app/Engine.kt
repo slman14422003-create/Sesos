@@ -52,12 +52,23 @@ object Engine {
         status?.name ?: "UNKNOWN"
     }
 
+    /** Adds the saved session of this site (if any) + consistent user agent + throttling. */
+    private suspend fun applyAuth(req: YoutubeDLRequest, url: String) {
+        val site = Site.forUrl(url) ?: return
+        if (!CookieStore.hasSession(site)) return
+        req.addOption("--cookies", CookieStore.file(site).absolutePath)
+        CookieStore.userAgent()?.let { req.addOption("--user-agent", it) }
+        req.addOption("--sleep-requests", "1")
+        Throttle.awaitSlot()
+    }
+
     suspend fun analyze(url: String): MediaInfo = withContext(Dispatchers.IO) {
         await()
         try {
             val req = YoutubeDLRequest(url)
             req.addOption("--no-playlist")
             req.addOption("--no-warnings")
+            applyAuth(req, url)
             val info = YoutubeDL.getInstance().getInfo(req)
             val formats = info.formats.orEmpty()
             val vf = formats.filter { !it.vcodec.isNullOrEmpty() && it.vcodec != "none" }
@@ -122,6 +133,7 @@ object Engine {
         if (!all) req.addOption("--no-playlist")
         req.addOption("--no-mtime")
         req.addOption("--no-warnings")
+        applyAuth(req, info.pageUrl)
         val name = if (all) "%(playlist_index)s - %(title).70s [%(id)s].%(ext)s" else "%(title).70s [%(id)s].%(ext)s"
         req.addOption("-o", File(tmpDir, name).absolutePath)
         if (kind == Kind.VIDEO) {
