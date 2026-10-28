@@ -76,7 +76,7 @@ object CookieStore {
     }
 
     /** Reads the WebView session, writes a Netscape cookies.txt private to the app, then clears the WebView. */
-    fun saveFromWebView(site: Site): Boolean {
+    fun saveFromWebView(site: Site, webUa: String? = null): Boolean {
         val cm = CookieManager.getInstance()
         cm.flush()
         val exp = System.currentTimeMillis() / 1000 + 365L * 24 * 3600
@@ -98,7 +98,7 @@ object CookieStore {
         if (!hasSession(site)) { f.delete(); refresh(); return false }
         // keep the same browser fingerprint when yt-dlp uses this session
         appCtx.getSharedPreferences("sesos", Context.MODE_PRIVATE).edit()
-            .putString("ua", WebSettings.getDefaultUserAgent(appCtx)).apply()
+            .putString("ua", webUa ?: WebSettings.getDefaultUserAgent(appCtx)).apply()
         cm.removeAllCookies(null)
         refresh()
         return true
