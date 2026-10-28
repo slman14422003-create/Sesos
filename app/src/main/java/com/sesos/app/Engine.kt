@@ -30,7 +30,13 @@ object Engine {
             FFmpeg.getInstance().init(app)
             state.value = State.Ready
         } catch (t: Throwable) {
-            state.value = State.Failed(t.message ?: "init failed")
+            android.util.Log.e("Sesos", "engine init failed", t)
+            val root = generateSequence(t) { it.cause }.last()
+            state.value = State.Failed(
+                t.javaClass.name + ": " + (t.message ?: "") +
+                    (if (root !== t) " | cause: " + root.javaClass.name + ": " + (root.message ?: "") else "") +
+                    " | " + (t.stackTrace.firstOrNull()?.toString() ?: "")
+            )
         }
     }
 

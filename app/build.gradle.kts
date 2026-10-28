@@ -32,8 +32,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false // R8 gives only a few MB here; the size is native libs. Turn on only after testing.
+            isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = if (ksFile != null) signingConfigs.getByName("release")
             else signingConfigs.getByName("debug")
