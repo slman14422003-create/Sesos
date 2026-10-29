@@ -11,7 +11,13 @@
 - المنصة platforms;android-37 غير متوفرة في صورة الـ runner، فلا يمكن استخدام compileSdk 37
 - الحل: العودة إلى خط geckoview 147 بنطاق [147.0,148.0) مع compileSdk 36
 
+## الجولة الثالثة
+- نجح فحص checkReleaseAarMetadata وفشل دمج المانيفست: geckoview 147 يتطلب minSdk 26 والمشروع على 24
+- الحل: رفع minSdk إلى 26 (يستثني أندرويد 7.0 و7.1)
+- بديل غير مفضل: tools:overrideLibrary وقد يسبب انهيارًا على الأجهزة القديمة
+
 ## الوضع الحالي
+- minSdk = 26
 - compileSdk = 36 مع android.suppressUnsupportedCompileSdk=36
 - geckoview بنطاق [147.0,148.0) وبعد أول بناء ناجح يُثبَّت على الإصدار المحلول
 - فرض androidx.lifecycle على 2.8.7 وandroidx.core (core وcore-ktx) على 1.15.0
