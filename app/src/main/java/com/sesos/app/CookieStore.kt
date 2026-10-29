@@ -121,6 +121,32 @@ object CookieStore {
         return true
     }
 
+    /** Accepts a Netscape cookies.txt text, or a plain Cookie header ("name=value; name2=value2"). */
+    fun importText(site: Site, raw: String): Boolean {
+        val text = raw.trim()
+        if (text.isEmpty()) return false
+        val out = StringBuilder("# Netscape HTTP Cookie File\n")
+        if (text.contains('\t')) {
+            text.lines().forEach { line ->
+                if (line.isNotBlank() && (!line.startsWith("#") || line.startsWith("#HttpOnly_")) &&
+                    site.domainKeys.any { line.substringBefore('\t').contains(it) }) out.append(line).append('\n')
+            }
+        } else {
+            val exp = System.currentTimeMillis() / 1000 + 365L * 24 * 3600
+            val domain = site.cookieUrls.values.first()
+            text.removePrefix("Cookie:").trim().split(";").forEach { part ->
+                val kv = part.trim()
+                val i = kv.indexOf('=')
+                if (i > 0) out.append("$domain\tTRUE\t/\tTRUE\t$exp\t${kv.substring(0, i)}\t${kv.substring(i + 1)}\n")
+            }
+        }
+        val f = file(site)
+        f.writeText(out.toString())
+        if (!hasSession(site)) { f.delete(); refresh(); return false }
+        refresh()
+        return true
+    }
+
     fun logout(site: Site) {
         file(site).delete()
         refresh()

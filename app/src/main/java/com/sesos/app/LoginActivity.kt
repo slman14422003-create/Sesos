@@ -13,6 +13,10 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
+import android.content.Intent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import android.os.Message
 import androidx.webkit.UserAgentMetadata
 import androidx.webkit.WebSettingsCompat
@@ -54,6 +58,57 @@ private fun LoginScreen(site: Site, onClose: () -> Unit) {
     }
     var web by remember { mutableStateOf<WebView?>(null) }
     var desktop by remember { mutableStateOf(false) }
+    var showHelp by remember { mutableStateOf(false) }
+    var showPaste by remember { mutableStateOf(false) }
+    var pasted by remember { mutableStateOf("") }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            val ok = try { CookieStore.importFile(ctx, site, uri) } catch (_: Exception) { false }
+            Toast.makeText(ctx, if (ok) "تم استيراد الجلسة" else "الملف لا يحتوي جلسة ${site.label}", Toast.LENGTH_LONG).show()
+            if (ok) onClose()
+        }
+    }
+    if (showPaste) AlertDialog(
+        onDismissRequest = { showPaste = false },
+        confirmButton = {
+            TextButton(onClick = {
+                val ok = CookieStore.importText(site, pasted)
+                Toast.makeText(ctx, if (ok) "تم استيراد الجلسة" else "النص لا يحتوي جلسة ${site.label}", Toast.LENGTH_LONG).show()
+                if (ok) { showPaste = false; onClose() }
+            }) { Text("حفظ") }
+        },
+        dismissButton = { TextButton(onClick = { showPaste = false }) { Text("إلغاء") } },
+        title = { Text("لصق الكوكيز") },
+        text = {
+            OutlinedTextField(
+                value = pasted, onValueChange = { pasted = it },
+                modifier = Modifier.fillMaxWidth(), minLines = 4,
+                label = { Text("Netscape أو name=value; name2=value2") }
+            )
+        }
+    )
+    if (showHelp) AlertDialog(
+        onDismissRequest = { showHelp = false },
+        confirmButton = {
+            TextButton(onClick = {
+                showHelp = false
+                try {
+                    ctx.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(site.loginUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (_: Exception) { Toast.makeText(ctx, "لا يوجد متصفح", Toast.LENGTH_SHORT).show() }
+            }) { Text("فتح المتصفح") }
+        },
+        dismissButton = { TextButton(onClick = { showHelp = false }) { Text("إلغاء") } },
+        title = { Text("الدخول من متصفح خارجي") },
+        text = {
+            Text(
+                "المتصفح الخارجي لا يمرّر الجلسة للتطبيق تلقائياً، لذلك:\n" +
+                "1) افتح المتصفح وسجّل دخولك بشكل عادي (أو عبر فيسبوك).\n" +
+                "2) استخدم متصفحاً يدعم الإضافات (Kiwi Browser أو Firefox) وثبّت إضافة Get cookies.txt LOCALLY.\n" +
+                "3) صدّر ملف cookies.txt لموقع ${site.label}.\n" +
+                "4) ارجع هنا واضغط \"استيراد cookies.txt\" واختر الملف."
+            )
+        }
+    )
 
     MaterialTheme(colorScheme = lightColorScheme(primary = androidx.compose.ui.graphics.Color(0xFF6C4DF6))) {
         Scaffold(topBar = {
@@ -82,6 +137,11 @@ private fun LoginScreen(site: Site, onClose: () -> Unit) {
             )
         }) { pad ->
             Column(Modifier.padding(pad).fillMaxSize()) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { showHelp = true }) { Text("متصفح خارجي") }
+                    OutlinedButton(onClick = { picker.launch(arrayOf("*/*")) }) { Text("ملف") }
+                    OutlinedButton(onClick = { showPaste = true }) { Text("لصق") }
+                }
                 if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth())
                 webVer?.let { Text("WebView: $it", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 8.dp)) }
                 consoleErr?.let { Text("JS: $it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 8.dp)) }
@@ -211,6 +271,15 @@ private fun applyBrowserIdentity(web: WebView, site: Site, desktop: Boolean) {
 private const val CHROME_SHIM = """
 (function(){
   try{ if(!window.chrome){ window.chrome={runtime:{},app:{isInstalled:false}}; } }catch(e){}
+  try{ Object.defineProperty(Navigator.prototype,'webdriver',{get:function(){return false;},configurable:true}); }catch(e){}
+  try{
+    var uad = navigator.userAgentData;
+    if (uad) {
+      var m = (navigator.userAgent.match(/Chrome\\/(\\d+)/)||[])[1] || '120';
+      var brands = [{brand:'Chromium',version:m},{brand:'Google Chrome',version:m},{brand:'Not.A/Brand',version:'99'}];
+      Object.defineProperty(Object.getPrototypeOf(uad),'brands',{get:function(){return brands;},configurable:true});
+    }
+  }catch(e){}
   if (window.top !== window) return;
   var tries = 0;
   var btnRe = /^(decline optional cookies|allow all cookies|allow essential and optional cookies|accept all|accept)$/i;
