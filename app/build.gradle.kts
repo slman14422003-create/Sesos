@@ -7,9 +7,17 @@ plugins {
 val ytdlAndroid = "0.18.1"
 val ksFile: String? = System.getenv("KEYSTORE_FILE")
 
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        // Newer releases require AGP 9.1+; keep the versions AGP 8.7.x accepts.
+        if (requested.group == "androidx.lifecycle") useVersion("2.8.7")
+        if (requested.group == "androidx.core" && (requested.name == "core" || requested.name == "core-ktx")) useVersion("1.15.0")
+    }
+}
+
 android {
     namespace = "com.sesos.app"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.sesos.app"
@@ -80,8 +88,8 @@ dependencies {
     implementation("androidx.webkit:webkit:1.14.0")
 
     // Real Firefox engine (not WebView): Meta pages render and log in normally.
-    // After the first successful build, replace "+" with the exact version Gradle resolved.
-    implementation("org.mozilla.geckoview:geckoview:+")
+    // Pinned to the exact version Gradle resolved in the failing CI run.
+    implementation("org.mozilla.geckoview:geckoview:159.0.20261022150525")
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 

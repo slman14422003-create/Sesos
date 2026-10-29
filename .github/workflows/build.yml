@@ -21,6 +21,11 @@ jobs:
         with:
           gradle-version: 8.9
 
+      - name: Install Android platform 37
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37" || true
+
       # Optional: stable signing so new builds update over old ones.
       # Add repo secrets: KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
       - name: Prepare keystore
