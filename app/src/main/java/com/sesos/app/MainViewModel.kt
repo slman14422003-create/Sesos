@@ -1,6 +1,7 @@
 package com.sesos.app
 
 import android.app.Application
+import com.sesos.app.R
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -16,13 +17,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var message by mutableStateOf<String?>(null)
     var downloadAll by mutableStateOf(false)
 
+    private fun str(id: Int, vararg args: Any): String = getApplication<Application>().getString(id, *args)
+
     fun onSharedUrl(shared: String) {
         url = shared
         analyze()
     }
 
     fun analyze() {
-        val u = UrlUtils.extract(url) ?: run { error = "الرابط غير صالح"; return }
+        val u = UrlUtils.extract(url) ?: run { error = str(R.string.invalid_url); return }
         url = u
         loading = true; error = null; info = null
         viewModelScope.launch {
@@ -31,8 +34,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             } catch (t: Throwable) {
                 val m = (t.message ?: "")
                 val needLogin = Regex("login|cookies|rate-limit|sign in", RegexOption.IGNORE_CASE).containsMatchIn(m)
-                error = "تعذّر تحليل الرابط: " + m.take(200) +
-                    if (needLogin) "\n\nجرّب قسم «الحسابات» أدناه وسجّل دخولك لهذا الموقع." else ""
+                error = str(R.string.analyze_failed, m.take(200)) +
+                    if (needLogin) "\n\n" + str(R.string.need_login_hint) else ""
             } finally {
                 loading = false
             }
@@ -42,20 +45,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun download(kind: Kind, height: Int? = null) {
         val i = info ?: return
         DownloadService.start(getApplication(), i, kind, height, downloadAll)
-        message = "بدأ التحميل"
+        message = str(R.string.download_started)
     }
 
     fun updateEngine() {
-        message = "جارٍ تحديث المحرك…"
+        message = str(R.string.updating_engine)
         viewModelScope.launch {
             message = try {
                 when (Engine.updateYtDlp(getApplication())) {
-                    "DONE" -> "تم تحديث yt-dlp"
-                    "ALREADY_UP_TO_DATE" -> "المحرك محدّث بالفعل"
-                    else -> "تم"
+                    "DONE" -> str(R.string.engine_updated)
+                    "ALREADY_UP_TO_DATE" -> str(R.string.engine_up_to_date)
+                    else -> str(R.string.engine_done)
                 }
             } catch (t: Throwable) {
-                "فشل التحديث: " + (t.message ?: "").take(120)
+                str(R.string.update_failed, (t.message ?: "").take(120))
             }
         }
     }

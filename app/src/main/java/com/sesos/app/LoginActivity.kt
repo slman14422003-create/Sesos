@@ -140,7 +140,7 @@ private fun LoginScreen(site: Site, onClose: () -> Unit) {
         }
     )
 
-    MaterialTheme(colorScheme = lightColorScheme(primary = androidx.compose.ui.graphics.Color(0xFF6C4DF6))) {
+    com.sesos.app.ui.SesosTheme {
         Scaffold(floatingActionButton = {
             if (looksLikeMedia(currentUrl)) ExtendedFloatingActionButton(onClick = downloadHere) { Text("تنزيل هذا الفيديو") }
         }, topBar = {

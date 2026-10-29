@@ -30,7 +30,7 @@ class DownloadService : Service() {
         if (intent == null) return START_NOT_STICKY
         ensureChannel()
         ServiceCompat.startForeground(
-            this, NOTIF_ID, notification("Sesos – جارٍ التحميل…"),
+            this, NOTIF_ID, notification(getString(R.string.notif_downloading)),
             if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0
         )
 

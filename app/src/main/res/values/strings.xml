@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="engine_update">تحديث المحرك</string>
+    <string name="engine_loading">جارٍ تجهيز المحرك (أول تشغيل قد يستغرق بضع ثوانٍ)…</string>
+    <string name="engine_failed">فشل تجهيز المحرك: %1$s</string>
+    <string name="url_hint">الصق الرابط أو شاركه إلى Sesos</string>
+    <string name="paste">لصق</string>
+    <string name="analyze">تحليل</string>
+    <string name="session_imported">تم استيراد الجلسة</string>
+    <string name="session_missing">الملف لا يحتوي جلسة %1$s</string>
+    <string name="video">فيديو</string>
+    <string name="best_quality">أفضل جودة</string>
+    <string name="download_audio">تحميل الصوت MP3</string>
+    <string name="download_image">تحميل الصورة</string>
+    <string name="download_all">تحميل كل العناصر (ألبوم / قائمة)</string>
+    <string name="accounts">الحسابات</string>
+    <string name="accounts_note">تسجيل الدخول اختياري، ويلزم فقط عند ظهور رسالة login required. الجلسة تُحفظ داخل التطبيق ولا تُرسل لأي جهة. يُفضّل استخدام حساب ثانوي.</string>
+    <string name="logged_in">مسجّل</string>
+    <string name="logged_out">غير مسجّل</string>
+    <string name="logout">خروج وحذف</string>
+    <string name="import_session">استيراد</string>
+    <string name="login">دخول</string>
+    <string name="downloads">التنزيلات</string>
+    <string name="download_done">تم التحميل</string>
+    <string name="open">فتح</string>
+    <string name="hide">إخفاء</string>
+    <string name="cancel">إلغاء</string>
+    <string name="download_failed">فشل: %1$s</string>
+    <string name="download_canceled">أُلغي</string>
+    <string name="notif_downloading">Sesos – جارٍ التحميل…</string>
+    <string name="invalid_url">الرابط غير صالح</string>
+    <string name="analyze_failed">تعذّر تحليل الرابط: %1$s</string>
+    <string name="need_login_hint">جرّب قسم «الحسابات» أدناه وسجّل دخولك لهذا الموقع.</string>
+    <string name="download_started">بدأ التحميل</string>
+    <string name="updating_engine">جارٍ تحديث المحرك…</string>
+    <string name="engine_updated">تم تحديث yt-dlp</string>
+    <string name="engine_up_to_date">المحرك محدّث بالفعل</string>
+    <string name="engine_done">تم</string>
+    <string name="update_failed">فشل التحديث: %1$s</string>
+</resources>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="engine_update">Update engine</string>
+    <string name="engine_loading">Preparing the engine (first launch may take a few seconds)…</string>
+    <string name="engine_failed">Engine setup failed: %1$s</string>
+    <string name="url_hint">Paste a link or share it to Sesos</string>
+    <string name="paste">Paste</string>
+    <string name="analyze">Analyze</string>
+    <string name="session_imported">Session imported</string>
+    <string name="session_missing">The file has no %1$s session</string>
+    <string name="video">Video</string>
+    <string name="best_quality">Best quality</string>
+    <string name="download_audio">Download audio MP3</string>
+    <string name="download_image">Download image</string>
+    <string name="download_all">Download all items (album / playlist)</string>
+    <string name="accounts">Accounts</string>
+    <string name="accounts_note">Signing in is optional and only needed when a login required message appears. The session stays inside the app and is never sent anywhere. A secondary account is recommended.</string>
+    <string name="logged_in">Signed in</string>
+    <string name="logged_out">Not signed in</string>
+    <string name="logout">Sign out and delete</string>
+    <string name="import_session">Import</string>
+    <string name="login">Sign in</string>
+    <string name="downloads">Downloads</string>
+    <string name="download_done">Downloaded</string>
+    <string name="open">Open</string>
+    <string name="hide">Hide</string>
+    <string name="cancel">Cancel</string>
+    <string name="download_failed">Failed: %1$s</string>
+    <string name="download_canceled">Canceled</string>
+    <string name="notif_downloading">Sesos – downloading…</string>
+    <string name="invalid_url">Invalid link</string>
+    <string name="analyze_failed">Could not analyze the link: %1$s</string>
+    <string name="need_login_hint">Try the Accounts section below and sign in to this site.</string>
+    <string name="download_started">Download started</string>
+    <string name="updating_engine">Updating the engine…</string>
+    <string name="engine_updated">yt-dlp updated</string>
+    <string name="engine_up_to_date">The engine is already up to date</string>
+    <string name="engine_done">Done</string>
+    <string name="update_failed">Update failed: %1$s</string>
+</resources>

@@ -119,7 +119,7 @@ private fun GeckoScreen(site: Site, onClose: () -> Unit) {
     val sessions by CookieStore.sessions.collectAsState()
     var desktop by remember { mutableStateOf(false) }
 
-    MaterialTheme(colorScheme = lightColorScheme(primary = androidx.compose.ui.graphics.Color(0xFF6C4DF6))) {
+    com.sesos.app.ui.SesosTheme {
         Scaffold(
             floatingActionButton = {
                 if (looksLikeMedia(url)) ExtendedFloatingActionButton(onClick = {
