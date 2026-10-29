@@ -16,11 +16,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var error by mutableStateOf<String?>(null)
     var message by mutableStateOf<String?>(null)
     var downloadAll by mutableStateOf(false)
+    var popupStartedAt by mutableStateOf(0L)
 
     private fun str(id: Int, vararg args: Any): String = getApplication<Application>().getString(id, *args)
 
     fun onSharedUrl(shared: String) {
         url = shared
+        popupStartedAt = 0L
         analyze()
     }
 

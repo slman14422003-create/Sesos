@@ -37,4 +37,15 @@
     <string name="engine_up_to_date">The engine is already up to date</string>
     <string name="engine_done">Done</string>
     <string name="update_failed">Update failed: %1$s</string>
+    <string name="analyzing">Analyzing the link…</string>
+    <string name="download_starting">Starting the download…</string>
+    <string name="open_app">Open Sesos</string>
+    <string name="close">Close</string>
+    <string name="nav_back">Back</string>
+    <string name="reload">Reload</string>
+    <string name="desktop_mode">Desktop</string>
+    <string name="mobile_mode">Mobile</string>
+    <string name="done_action">Done</string>
+    <string name="download_this">Download this video</string>
+    <string name="not_signed_toast">Not signed in, the download will try as public content</string>
 </resources>

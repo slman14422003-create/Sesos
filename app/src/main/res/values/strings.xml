@@ -37,4 +37,15 @@
     <string name="engine_up_to_date">المحرك محدّث بالفعل</string>
     <string name="engine_done">تم</string>
     <string name="update_failed">فشل التحديث: %1$s</string>
+    <string name="analyzing">جارٍ تحليل الرابط…</string>
+    <string name="download_starting">جارٍ بدء التحميل…</string>
+    <string name="open_app">فتح Sesos</string>
+    <string name="close">إغلاق</string>
+    <string name="nav_back">رجوع</string>
+    <string name="reload">تحديث</string>
+    <string name="desktop_mode">كمبيوتر</string>
+    <string name="mobile_mode">جوال</string>
+    <string name="done_action">تم</string>
+    <string name="download_this">تنزيل هذا الفيديو</string>
+    <string name="not_signed_toast">غير مسجّل دخول، سيُحاول التنزيل كمحتوى عام</string>
 </resources>

@@ -441,7 +441,7 @@ private fun DownloadRow(d: DownloadItem, onOpen: () -> Unit) {
     }
 }
 
-private fun android.content.Context.open(d: DownloadItem) {
+internal fun android.content.Context.open(d: DownloadItem) {
     val uri = d.uri ?: return
     val i = Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(uri), d.mime)
         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)

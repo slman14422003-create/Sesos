@@ -3,7 +3,14 @@ package com.sesos.app.ui
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -152,4 +159,22 @@ fun Modifier.bounceClick(onClick: () -> Unit): Modifier = composed {
             scaleY = s.value
         }
         .clickable(interactionSource = src, indication = null, onClick = onClick)
+}
+
+@Composable
+fun CircleButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    size: Dp = 40.dp,
+    background: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(background)
+            .bounceClick(onClick),
+        contentAlignment = Alignment.Center
+    ) { content() }
 }
