@@ -76,7 +76,7 @@ object CookieStore {
     }
 
     /** Reads the WebView session, writes a Netscape cookies.txt private to the app, then clears the WebView. */
-    fun saveFromWebView(site: Site, webUa: String? = null): Boolean {
+    fun saveFromWebView(site: Site, webUa: String? = null, clearWeb: Boolean = true): Boolean {
         val cm = CookieManager.getInstance()
         cm.flush()
         val exp = System.currentTimeMillis() / 1000 + 365L * 24 * 3600
@@ -93,13 +93,13 @@ object CookieStore {
                 }
             }
         }
-        val f = file(site)
-        f.writeText(sb.toString())
-        if (!hasSession(site)) { f.delete(); refresh(); return false }
+        // only overwrite the stored session when the browser really is logged in
+        if (site.sessionCookies.none { sb.contains("\t$it\t") }) return false
+        file(site).writeText(sb.toString())
         // keep the same browser fingerprint when yt-dlp uses this session
         appCtx.getSharedPreferences("sesos", Context.MODE_PRIVATE).edit()
             .putString("ua", webUa ?: WebSettings.getDefaultUserAgent(appCtx)).apply()
-        cm.removeAllCookies(null)
+        if (clearWeb) cm.removeAllCookies(null)
         refresh()
         return true
     }
@@ -126,7 +126,23 @@ object CookieStore {
         val text = raw.trim()
         if (text.isEmpty()) return false
         val out = StringBuilder("# Netscape HTTP Cookie File\n")
-        if (text.contains('\t')) {
+        if (text.startsWith("[") || text.startsWith("{")) {
+            // Cookie-Editor / EditThisCookie JSON export
+            try {
+                val arr = if (text.startsWith("[")) org.json.JSONArray(text)
+                else org.json.JSONObject(text).optJSONArray("cookies") ?: org.json.JSONArray()
+                for (i in 0 until arr.length()) {
+                    val o = arr.getJSONObject(i)
+                    val domain = o.optString("domain")
+                    if (domain.isBlank() || site.domainKeys.none { domain.contains(it) }) continue
+                    val exp = if (o.has("expirationDate")) o.optDouble("expirationDate").toLong()
+                    else System.currentTimeMillis() / 1000 + 365L * 24 * 3600
+                    val prefix = if (o.optBoolean("httpOnly")) "#HttpOnly_" else ""
+                    out.append("$prefix$domain\t${if (domain.startsWith(".")) "TRUE" else "FALSE"}\t${o.optString("path", "/")}\t" +
+                        "${if (o.optBoolean("secure", true)) "TRUE" else "FALSE"}\t$exp\t${o.getString("name")}\t${o.optString("value")}\n")
+                }
+            } catch (_: Exception) { return false }
+        } else if (text.contains('\t')) {
             text.lines().forEach { line ->
                 if (line.isNotBlank() && (!line.startsWith("#") || line.startsWith("#HttpOnly_")) &&
                     site.domainKeys.any { line.substringBefore('\t').contains(it) }) out.append(line).append('\n')

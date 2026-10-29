@@ -37,11 +37,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 
+/** True when the page is a single video / reel / post that can be handed to the downloader. */
+private fun looksLikeMedia(url: String): Boolean {
+    val u = url.lowercase()
+    return Regex("instagram\\.com/(p|reel|reels|tv)/").containsMatchIn(u) ||
+        Regex("facebook\\.com/(watch|reel|share/(v|r)/|[^/?]+/videos/|photo|permalink|story\\.php)").containsMatchIn(u) ||
+        Regex("(youtube\\.com/(watch|shorts)|youtu\\.be/)").containsMatchIn(u)
+}
+
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val site = Site.valueOf(intent.getStringExtra("site") ?: Site.INSTAGRAM.name)
-        if (savedInstanceState == null) CookieManager.getInstance().removeAllCookies(null)
         setContent { LoginScreen(site) { finish() } }
     }
 }
@@ -59,6 +66,20 @@ private fun LoginScreen(site: Site, onClose: () -> Unit) {
     }
     var web by remember { mutableStateOf<WebView?>(null) }
     var desktop by remember { mutableStateOf(false) }
+    val downloadHere: () -> Unit = {
+        val logged = CookieStore.saveFromWebView(site, web?.settings?.userAgentString, clearWeb = false)
+        if (!logged && !CookieStore.hasSession(site)) {
+            Toast.makeText(ctx, "غير مسجّل دخول، سيُحاول التنزيل كمحتوى عام", Toast.LENGTH_SHORT).show()
+        }
+        val i = Intent(ctx, MainActivity::class.java).apply {
+            action = Intent.ACTION_SEND
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, currentUrl)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+        ctx.startActivity(i)
+        onClose()
+    }
     var showHelp by remember { mutableStateOf(false) }
     var showPaste by remember { mutableStateOf(false) }
     var pasted by remember { mutableStateOf("") }
@@ -78,13 +99,21 @@ private fun LoginScreen(site: Site, onClose: () -> Unit) {
                 if (ok) { showPaste = false; onClose() }
             }) { Text("حفظ") }
         },
-        dismissButton = { TextButton(onClick = { showPaste = false }) { Text("إلغاء") } },
+        dismissButton = {
+            Row {
+                TextButton(onClick = {
+                    val cm = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    pasted = cm.primaryClip?.getItemAt(0)?.coerceToText(ctx)?.toString() ?: ""
+                }) { Text("من الحافظة") }
+                TextButton(onClick = { showPaste = false }) { Text("إلغاء") }
+            }
+        },
         title = { Text("لصق الكوكيز") },
         text = {
             OutlinedTextField(
                 value = pasted, onValueChange = { pasted = it },
                 modifier = Modifier.fillMaxWidth(), minLines = 4,
-                label = { Text("Netscape أو name=value; name2=value2") }
+                label = { Text("JSON أو Netscape أو name=value; ...") }
             )
         }
     )
@@ -102,17 +131,19 @@ private fun LoginScreen(site: Site, onClose: () -> Unit) {
         title = { Text("الدخول من متصفح خارجي") },
         text = {
             Text(
-                "المتصفح الخارجي لا يمرّر الجلسة للتطبيق تلقائياً، لذلك:\n" +
-                "1) افتح المتصفح وسجّل دخولك بشكل عادي (أو عبر فيسبوك).\n" +
-                "2) استخدم متصفحاً يدعم الإضافات (Kiwi Browser أو Firefox) وثبّت إضافة Get cookies.txt LOCALLY.\n" +
-                "3) صدّر ملف cookies.txt لموقع ${site.label}.\n" +
-                "4) ارجع هنا واضغط \"استيراد cookies.txt\" واختر الملف."
+                "أنجح طريقة مجانية الآن:\n" +
+                "1) ثبّت Firefox للأندرويد، وأضف إضافة Cookie-Editor.\n" +
+                "2) سجّل دخولك في ${site.label} من Firefox (أو عبر فيسبوك).\n" +
+                "3) افتح Cookie-Editor ← Export ← JSON (يُنسخ للحافظة).\n" +
+                "4) ارجع هنا واضغط \"لصق\" ثم \"من الحافظة\" ثم \"حفظ\"."
             )
         }
     )
 
     MaterialTheme(colorScheme = lightColorScheme(primary = androidx.compose.ui.graphics.Color(0xFF6C4DF6))) {
-        Scaffold(topBar = {
+        Scaffold(floatingActionButton = {
+            if (looksLikeMedia(currentUrl)) ExtendedFloatingActionButton(onClick = downloadHere) { Text("تنزيل هذا الفيديو") }
+        }, topBar = {
             TopAppBar(
                 title = { Text(site.label) },
                 actions = {
@@ -126,7 +157,7 @@ private fun LoginScreen(site: Site, onClose: () -> Unit) {
                     }) { Text(if (desktop) "جوال" else "كمبيوتر") }
                     TextButton(onClick = { error = null; consoleErr = null; web?.reload() }) { Text("إعادة تحميل") }
                     TextButton(onClick = {
-                        val ok = CookieStore.saveFromWebView(site, web?.settings?.userAgentString)
+                        val ok = CookieStore.saveFromWebView(site, web?.settings?.userAgentString, clearWeb = false)
                         Toast.makeText(
                             ctx,
                             if (ok) "تم حفظ الجلسة بأمان على جهازك" else "ما زلت غير مسجّل الدخول، أكمل الدخول أولاً",
@@ -201,6 +232,15 @@ private fun LoginScreen(site: Site, onClose: () -> Unit) {
                                         val scheme = request.url.scheme?.lowercase()
                                         // ignore "open in app" deep links (intent://, fb://, instagram://...) and stay on the web page
                                         return scheme !in setOf("http", "https", "about", "blob", "data", "javascript")
+                                    }
+
+                                    override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+                                        if (url != null) currentUrl = url
+                                    }
+
+                                    override fun onPageFinished(view: WebView?, url: String?) {
+                                        // like Snaptube: browsing while logged in keeps the downloader session fresh
+                                        try { CookieStore.saveFromWebView(site, view?.settings?.userAgentString, clearWeb = false) } catch (_: Throwable) {}
                                     }
 
                                     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
