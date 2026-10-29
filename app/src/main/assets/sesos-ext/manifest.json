@@ -1,0 +1,24 @@
+{
+  "manifest_version": 2,
+  "name": "Sesos Bridge",
+  "version": "1.0",
+  "description": "Sends the logged-in session and current page URL to the Sesos app.",
+  "browser_specific_settings": { "gecko": { "id": "sesos@sesos.app" } },
+  "background": { "scripts": ["background.js"] },
+  "content_scripts": [
+    {
+      "matches": ["*://*.instagram.com/*", "*://*.facebook.com/*", "*://*.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "nativeMessaging",
+    "geckoViewAddons",
+    "cookies",
+    "*://*.instagram.com/*",
+    "*://*.facebook.com/*",
+    "*://*.youtube.com/*",
+    "*://*.google.com/*"
+  ]
+}

@@ -89,7 +89,7 @@ fun SesosScreen(vm: MainViewModel) {
                 item {
                     AccountsCard(
                         sessions = sessions,
-                        onLogin = { site -> ctx.startActivity(Intent(ctx, LoginActivity::class.java).putExtra("site", site.name)) },
+                        onLogin = { site -> ctx.startActivity(Intent(ctx, com.sesos.app.GeckoBrowserActivity::class.java).putExtra("site", site.name)) },
                         onImport = { site -> importSite = site; picker.launch(arrayOf("*/*")) },
                         onLogout = { site -> CookieStore.logout(site) }
                     )

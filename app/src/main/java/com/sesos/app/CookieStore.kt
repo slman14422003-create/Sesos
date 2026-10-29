@@ -168,6 +168,10 @@ object CookieStore {
         refresh()
     }
 
+    fun saveUserAgent(ua: String) {
+        appCtx.getSharedPreferences("sesos", Context.MODE_PRIVATE).edit().putString("ua", ua).apply()
+    }
+
     fun userAgent(): String? =
         appCtx.getSharedPreferences("sesos", Context.MODE_PRIVATE).getString("ua", null)
 }

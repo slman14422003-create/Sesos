@@ -41,7 +41,12 @@ android {
     }
 
     // yt-dlp + python + ffmpeg are shipped as native libs and must be extracted to disk.
-    packaging { jniLibs { useLegacyPackaging = true } }
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+            pickFirsts += "**/libc++_shared.so"
+        }
+    }
 
     splits {
         abi {
@@ -57,7 +62,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
+    kotlinOptions {
+        jvmTarget = "17"
+        // GeckoView may be built with a newer Kotlin than 2.0.21
+        freeCompilerArgs += "-Xskip-metadata-version-check"
+    }
 }
 
 dependencies {
@@ -69,6 +78,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.webkit:webkit:1.14.0")
+
+    // Real Firefox engine (not WebView): Meta pages render and log in normally.
+    // After the first successful build, replace "+" with the exact version Gradle resolved.
+    implementation("org.mozilla.geckoview:geckoview:+")
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 

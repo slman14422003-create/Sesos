@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 
 /** True when the page is a single video / reel / post that can be handed to the downloader. */
-private fun looksLikeMedia(url: String): Boolean {
+internal fun looksLikeMedia(url: String): Boolean {
     val u = url.lowercase()
     return Regex("instagram\\.com/(p|reel|reels|tv)/").containsMatchIn(u) ||
         Regex("facebook\\.com/(watch|reel|share/(v|r)/|[^/?]+/videos/|photo|permalink|story\\.php)").containsMatchIn(u) ||
