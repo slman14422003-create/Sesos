@@ -208,7 +208,46 @@ private fun applyBrowserIdentity(web: WebView, site: Site, desktop: Boolean) {
     } catch (_: Throwable) { }
 }
 
-private const val CHROME_SHIM = "try{if(!window.chrome){window.chrome={runtime:{},app:{isInstalled:false}};}}catch(e){}"
+private const val CHROME_SHIM = """
+(function(){
+  try{ if(!window.chrome){ window.chrome={runtime:{},app:{isInstalled:false}}; } }catch(e){}
+  if (window.top !== window) return;
+  var tries = 0;
+  var btnRe = /^(decline optional cookies|allow all cookies|allow essential and optional cookies|accept all|accept)$/i;
+  function clickConsent(){
+    var els = document.querySelectorAll('button,[role="button"],a');
+    var allow = null;
+    for (var i=0;i<els.length;i++){
+      var t=(els[i].innerText||els[i].textContent||'').trim();
+      if(/^decline optional cookies$/i.test(t)){ els[i].click(); return true; }
+      if(!allow && btnRe.test(t)) allow = els[i];
+    }
+    if(allow){ allow.click(); return true; }
+    return false;
+  }
+  function killScrim(){
+    var divs = document.querySelectorAll('div');
+    for (var i=0;i<divs.length;i++){
+      var d=divs[i], cs;
+      try{ cs=getComputedStyle(d); }catch(e){ continue; }
+      if(cs.position!=='fixed') continue;
+      var r=d.getBoundingClientRect();
+      if(r.width < window.innerWidth*0.9 || r.height < window.innerHeight*0.9) continue;
+      if(d.querySelector('input,button,form,a')) continue;
+      if((d.innerText||'').trim().length > 3) continue;
+      var bg=cs.backgroundColor||'';
+      if(bg && bg!=='rgba(0, 0, 0, 0)' && bg!=='transparent'){ d.style.setProperty('display','none','important'); }
+    }
+    if(document.documentElement) document.documentElement.style.setProperty('overflow','auto','important');
+    if(document.body) document.body.style.setProperty('overflow','auto','important');
+  }
+  var iv=setInterval(function(){
+    tries++;
+    try{ clickConsent(); killScrim(); }catch(e){}
+    if(tries>60) clearInterval(iv);
+  },500);
+})();
+"""
 
 private fun desktopUrl(site: Site) = when (site) {
     Site.FACEBOOK -> "https://www.facebook.com/login.php"
