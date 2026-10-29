@@ -8,7 +8,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -257,7 +256,7 @@ private fun GeckoScreen(site: Site, onClose: () -> Unit) {
                     modifier = Modifier.fillMaxSize(),
                     factory = { c -> GeckoView(c).also { it.setSession(session) } }
                 )
-                AnimatedVisibility(
+                androidx.compose.animation.AnimatedVisibility(
                     visible = looksLikeMedia(url),
                     modifier = Modifier.align(Alignment.BottomCenter).padding(Spacing.lg),
                     enter = slideInVertically { it } + fadeIn(),

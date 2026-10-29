@@ -55,3 +55,8 @@
 - Theme.kt: أضيف CircleButton
 - نصوص جديدة في strings.xml بالعربية والإنجليزية
 - لم يُجرَّب البناء، فأي خطأ ترجمة يُرسل لوجه للإصلاح
+
+## إصلاح: خطأ ترجمة في GeckoBrowserActivity
+- AnimatedVisibility داخل Box ضمن Column يلتقط نسخة ColumnScope الضمنية ويفشل
+- الحل: استدعاء androidx.compose.animation.AnimatedVisibility باسمه الكامل
+- البناء وصل إلى compileReleaseKotlin وهذا الخطأ الوحيد الذي ظهر
