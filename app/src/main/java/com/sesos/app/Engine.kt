@@ -136,9 +136,12 @@ object Engine {
         applyAuth(req, info.pageUrl)
         val name = if (all) "%(playlist_index)s - %(title).70s [%(id)s].%(ext)s" else "%(title).70s [%(id)s].%(ext)s"
         req.addOption("-o", File(tmpDir, name).absolutePath)
+        req.addOption("--print-traces")
         if (kind == Kind.VIDEO) {
             val h = height?.let { "[height<=$it]" } ?: ""
-            req.addOption("-f", "bv*$h[ext=mp4]+ba[ext=m4a]/bv*$h+ba/b$h/b")
+            val progressiveFirst = Site.forUrl(info.pageUrl) == Site.INSTAGRAM
+            val sel = if (progressiveFirst) "b$h/bv*$h+ba/b" else "bv*$h[ext=mp4]+ba[ext=m4a]/bv*$h+ba/b$h/b"
+            req.addOption("-f", sel)
             req.addOption("--merge-output-format", "mp4")
         } else {
             req.addOption("-f", "bestaudio/best")

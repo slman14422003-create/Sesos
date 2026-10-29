@@ -63,7 +63,7 @@ class DownloadService : Service() {
                     DownloadCenter.update(id) { it.copy(status = Status.CANCELED) }
                 } else {
                     DownloadCenter.update(id) {
-                        it.copy(status = Status.ERROR, message = (t.message ?: t.javaClass.simpleName).take(300))
+                        it.copy(status = Status.ERROR, message = (t.message ?: t.javaClass.simpleName).let { m -> if (m.length > 600) "..." + m.takeLast(600) else m })
                     }
                 }
             } finally {
