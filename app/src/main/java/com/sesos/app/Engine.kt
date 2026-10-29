@@ -136,7 +136,7 @@ object Engine {
         applyAuth(req, info.pageUrl)
         val name = if (all) "%(playlist_index)s - %(title).70s [%(id)s].%(ext)s" else "%(title).70s [%(id)s].%(ext)s"
         req.addOption("-o", File(tmpDir, name).absolutePath)
-        req.addOption("--print-traces")
+        req.addOption("-v")
         if (kind == Kind.VIDEO) {
             val h = height?.let { "[height<=$it]" } ?: ""
             val progressiveFirst = Site.forUrl(info.pageUrl) == Site.INSTAGRAM
