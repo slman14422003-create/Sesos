@@ -1,24 +1,23 @@
 # skills
 
 ## المهمة
-إصلاح فشل بناء assembleRelease في مهمة checkReleaseAarMetadata
+إصلاح فشل بناء assembleRelease على GitHub Actions
 
-## السبب
-- geckoview بنسخة عائمة "+" انحلّت إلى 159.0.20261022150525 وتتطلب compileSdk 37
-- مكتبات androidx المسحوبة (core 1.19.1 و lifecycle 2.11.0) تتطلب AGP 9.1.0 بينما المشروع على 8.7.3
-- مكتبات media3 1.11.1 تتطلب compileSdk 36
+## الجولة الأولى
+- الفشل في checkReleaseAarMetadata بسبب geckoview:+ المنحل إلى 159 وهو يتطلب compileSdk 37
+- مكتبات androidx الأحدث (core 1.19.1 و lifecycle 2.11.0) تتطلب AGP 9.1.0 والمشروع على 8.7.3
 
-## ما تم
-- compileSdk من 35 إلى 37 في app/build.gradle.kts
-- تثبيت geckoview على 159.0.20261022150525
-- فرض androidx.lifecycle على 2.8.7 وandroidx.core (core و core-ktx) على 1.15.0 عبر resolutionStrategy
-- إضافة android.suppressUnsupportedCompileSdk=37 في gradle.properties
-- إضافة خطوة تثبيت منصة android-37 في .github/workflows/build.yml
+## الجولة الثانية
+- المنصة platforms;android-37 غير متوفرة في صورة الـ runner، فلا يمكن استخدام compileSdk 37
+- الحل: العودة إلى خط geckoview 147 بنطاق [147.0,148.0) مع compileSdk 36
+
+## الوضع الحالي
+- compileSdk = 36 مع android.suppressUnsupportedCompileSdk=36
+- geckoview بنطاق [147.0,148.0) وبعد أول بناء ناجح يُثبَّت على الإصدار المحلول
+- فرض androidx.lifecycle على 2.8.7 وandroidx.core (core وcore-ktx) على 1.15.0
+- الـ workflow يثبّت platforms;android-36
 
 ## إن فشل البناء مجددًا
-- خطأ يخص منصة android-37: نتأكد من نجاح خطوة sdkmanager في الـ workflow
-- خطأ تجميع كوتلن مع Gecko: نراجع واجهات GeckoSession وGeckoRuntime في GeckoBrowserActivity.kt
-- الحل الأوسع: ترقية AGP إلى 9.1 مع Gradle المناسب وتعديل إعدادات كوتلن
-
-## ملاحظة
-لم يُختبر البناء محليًا لعدم توفر الشبكة، والاختبار الفعلي عبر GitHub Actions
+- خطأ لا يجد geckoview ضمن النطاق: نغيّر النطاق إلى خط آخر (مثلًا [145.0,146.0))
+- خطأ يطلب compileSdk 37 من Gecko: نخفض خط Gecko
+- خطأ كوتلن في GeckoBrowserActivity.kt: نراجع واجهات GeckoSession وGeckoRuntime

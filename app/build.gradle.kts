@@ -17,7 +17,7 @@ configurations.configureEach {
 
 android {
     namespace = "com.sesos.app"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.sesos.app"
@@ -88,8 +88,9 @@ dependencies {
     implementation("androidx.webkit:webkit:1.14.0")
 
     // Real Firefox engine (not WebView): Meta pages render and log in normally.
-    // Pinned to the exact version Gradle resolved in the failing CI run.
-    implementation("org.mozilla.geckoview:geckoview:159.0.20261022150525")
+    // Release 159 needs compileSdk 37 which the CI image lacks, so stay on the 147 line.
+    // After a green build, replace the range with the exact version Gradle resolved.
+    implementation("org.mozilla.geckoview:geckoview:[147.0,148.0)")
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
