@@ -6,6 +6,9 @@ plugins {
 
 val ytdlAndroid = "0.18.1"
 val ksFile: String? = System.getenv("KEYSTORE_FILE")
+// Secrets pasted into GitHub often carry a trailing newline or invisible characters -> keep printable ASCII only
+fun cleanSecret(name: String): String? =
+    System.getenv(name)?.filter { it.code in 33..126 }?.takeIf { it.isNotEmpty() }
 
 configurations.configureEach {
     resolutionStrategy.eachDependency {
@@ -31,9 +34,9 @@ android {
         if (ksFile != null) {
             create("release") {
                 storeFile = file(ksFile)
-                storePassword = System.getenv("KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("KEY_ALIAS")
-                keyPassword = System.getenv("KEY_PASSWORD")
+                storePassword = cleanSecret("KEYSTORE_PASSWORD")
+                keyAlias = cleanSecret("KEY_ALIAS")
+                keyPassword = cleanSecret("KEY_PASSWORD")
             }
         }
     }
