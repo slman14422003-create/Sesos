@@ -25,7 +25,6 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
-        resourceConfigurations += listOf("ar", "en")
     }
 
     signingConfigs {
@@ -41,10 +40,8 @@ android {
 
     buildTypes {
         release {
-            // Shrinks the Java/Kotlin side (Compose, Material, Coil) and unused resources.
-            // If a release build ever crashes at runtime, set both to false to compare.
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false // R8 gives only a few MB here; the size is native libs. Turn on only after testing.
+            isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = if (ksFile != null) signingConfigs.getByName("release")
             else signingConfigs.getByName("debug")
@@ -56,12 +53,6 @@ android {
         jniLibs {
             useLegacyPackaging = true
             pickFirsts += "**/libc++_shared.so"
-        }
-        resources {
-            excludes += listOf(
-                "/META-INF/AL2.0", "/META-INF/LGPL2.1", "/META-INF/LICENSE*", "/META-INF/NOTICE*",
-                "/META-INF/DEPENDENCIES", "DebugProbesKt.bin", "kotlin-tooling-metadata.json"
-            )
         }
     }
 
