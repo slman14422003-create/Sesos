@@ -8,7 +8,10 @@ import com.yausername.youtubedl_android.YoutubeDLRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -21,10 +24,21 @@ object Engine {
     }
 
     val state = MutableStateFlow<State>(State.Loading)
+    private val updating = MutableStateFlow(false)
+    private val updateLock = Mutex()
+    private var appCtx: Application? = null
     private const val UA =
         "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36"
 
+    /** YouTube clients, best first. android_vr/android_sdkless are rejected with 403 since Aug 2026. */
+    private val ytClients = listOf(
+        "default,-android_vr,-android_sdkless",
+        "tv,web_safari,mweb",
+        "ios,web_safari"
+    )
+
     fun init(app: Application) {
+        appCtx = app
         try {
             YoutubeDL.getInstance().init(app)
             FFmpeg.getInstance().init(app)
@@ -43,16 +57,57 @@ object Engine {
     private suspend fun await() {
         val s = state.first { it !is State.Loading }
         if (s is State.Failed) throw IllegalStateException(s.msg)
+        // never start a job in the middle of an engine update (files are being replaced)
+        if (updating.value) withTimeoutOrNull(60_000) { updating.first { !it } }
     }
 
     suspend fun ready() = await()
 
-    /** Update the bundled yt-dlp (sites change often, so this matters). */
+    /** Update the bundled yt-dlp (sites change often, so this matters). Nightly = fastest fixes. */
     suspend fun updateYtDlp(ctx: Context): String = withContext(Dispatchers.IO) {
-        await()
-        val status = YoutubeDL.getInstance().updateYoutubeDL(ctx, YoutubeDL.UpdateChannel.STABLE)
-        status?.name ?: "UNKNOWN"
+        val s = state.first { it !is State.Loading }
+        if (s is State.Failed) throw IllegalStateException(s.msg)
+        updateLock.withLock {
+            updating.value = true
+            try {
+                val status = YoutubeDL.getInstance().updateYoutubeDL(ctx, YoutubeDL.UpdateChannel.NIGHTLY)
+                ctx.getSharedPreferences("sesos_prefs", Context.MODE_PRIVATE)
+                    .edit().putLong("ytdlp_updated_at", System.currentTimeMillis()).apply()
+                status?.name ?: "UNKNOWN"
+            } finally {
+                updating.value = false
+            }
+        }
     }
+
+    /** Silent background refresh, at most once every 12 hours. Never throws. */
+    suspend fun autoUpdate(ctx: Context) {
+        try {
+            val last = ctx.getSharedPreferences("sesos_prefs", Context.MODE_PRIVATE).getLong("ytdlp_updated_at", 0L)
+            if (System.currentTimeMillis() - last < 12L * 3600_000L) return
+            updateYtDlp(ctx)
+        } catch (t: Throwable) {
+            android.util.Log.w("Sesos", "auto update skipped: " + t.message)
+        }
+    }
+
+    /** Boils a yt-dlp traceback down to the one line that matters. */
+    fun friendly(t: Throwable): String {
+        val raw = t.message ?: t.javaClass.simpleName
+        val lines = raw.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        val noise = listOf("File \"", "^", "~", "return ", "Traceback", "[debug]", "raise ", "self.", "yield ")
+        val pick = lines.lastOrNull { it.startsWith("ERROR:") }
+            ?: lines.lastOrNull { l -> noise.none { l.startsWith(it) } }
+            ?: raw
+        return pick.removePrefix("ERROR:").trim()
+            .replace(Regex("^\\[[A-Za-z:_]+\\]\\s*[\\w-]+:\\s*"), "")
+            .let { if (it.length > 220) it.take(220) + "…" else it }
+    }
+
+    private fun isYoutube(url: String) = Regex("(youtube\\.com|youtu\\.be|music\\.youtube)", RegexOption.IGNORE_CASE).containsMatchIn(url)
+
+    private fun needsEngineUpdate(msg: String) =
+        Regex("403|forbidden|sign in|confirm you.re not a bot|unable to extract|nsig|player", RegexOption.IGNORE_CASE).containsMatchIn(msg)
 
     /** Adds the saved session of this site (if any) + consistent user agent + throttling. */
     private suspend fun applyAuth(req: YoutubeDLRequest, url: String) {
@@ -64,12 +119,22 @@ object Engine {
         Throttle.awaitSlot()
     }
 
+    private fun applyAuthBlocking(req: YoutubeDLRequest, url: String) {
+        val site = Site.forUrl(url) ?: return
+        if (!CookieStore.hasSession(site)) return
+        req.addOption("--cookies", CookieStore.file(site).absolutePath)
+        CookieStore.userAgent()?.let { req.addOption("--user-agent", it) }
+        req.addOption("--sleep-requests", "1")
+    }
+
     suspend fun analyze(url: String): MediaInfo = withContext(Dispatchers.IO) {
         await()
         try {
             val req = YoutubeDLRequest(url)
             req.addOption("--no-playlist")
             req.addOption("--no-warnings")
+            req.addOption("--socket-timeout", "20")
+            if (isYoutube(url)) req.addOption("--extractor-args", "youtube:player_client=" + ytClients[0])
             applyAuth(req, url)
             val info = YoutubeDL.getInstance().getInfo(req)
             val formats = info.formats.orEmpty()
@@ -121,7 +186,7 @@ object Engine {
         return v?.replace("&amp;", "&")
     }
 
-    /** Downloads into tmpDir and returns the finished files. */
+    /** Downloads into tmpDir and returns the finished files. Retries with other YouTube clients. */
     suspend fun download(
         id: String, info: MediaInfo, kind: Kind, height: Int?, all: Boolean, tmpDir: File,
         onProgress: (Float) -> Unit
@@ -131,14 +196,65 @@ object Engine {
         if (kind == Kind.IMAGE) {
             return@withContext listOf(downloadImage(info, tmpDir, onProgress))
         }
+
+        // forward progress only when it moves by >=1% so the UI isn't flooded with updates
+        var lastSent = -1f
+        val progress: (Float) -> Unit = { p ->
+            if (p >= 1f || p - lastSent >= 0.01f) { lastSent = p; onProgress(p) }
+        }
+
+        val clients: List<String?> = if (isYoutube(info.pageUrl)) ytClients else listOf(null)
+        var lastError: Throwable? = null
+        var updatedOnce = false
+        var attempt = 0
+        while (attempt < clients.size) {
+            if (DownloadCenter.canceled.contains(id)) throw IllegalStateException("canceled")
+            Site.forUrl(info.pageUrl)?.let { if (CookieStore.hasSession(it)) Throttle.awaitSlot() }
+            val req = buildRequest(info, kind, height, all, tmpDir, clients[attempt])
+            try {
+                YoutubeDL.getInstance().execute(req, id) { p, _, _ ->
+                    if (p >= 0f) progress((p / 100f).coerceIn(0f, 1f))
+                }
+                lastError = null
+                break
+            } catch (e: Exception) {
+                if (DownloadCenter.canceled.contains(id)) throw e
+                // A playlist with some unavailable items still yields the rest.
+                if (all && outputs(tmpDir).isNotEmpty()) { lastError = null; break }
+                lastError = e
+                // first sign of a site change: pull the newest yt-dlp once, then retry the same client
+                if (!updatedOnce && needsEngineUpdate(e.message ?: "")) {
+                    updatedOnce = true
+                    val ctx = appCtx
+                    if (ctx != null && DownloadCenter.items.value.count { it.status == Status.RUNNING } <= 1) {
+                        try { updateYtDlp(ctx); lastSent = -1f; continue } catch (_: Throwable) {}
+                    }
+                }
+                attempt++
+            }
+        }
+        lastError?.let { throw it }
+        val files = outputs(tmpDir)
+        if (files.isEmpty()) throw IllegalStateException("no output file")
+        files
+    }
+
+    private fun buildRequest(
+        info: MediaInfo, kind: Kind, height: Int?, all: Boolean, tmpDir: File, ytClient: String?
+    ): YoutubeDLRequest {
         val req = YoutubeDLRequest(info.pageUrl)
         if (!all) req.addOption("--no-playlist")
         req.addOption("--no-mtime")
         req.addOption("--no-warnings")
-        applyAuth(req, info.pageUrl)
+        req.addOption("--retries", "5")
+        req.addOption("--fragment-retries", "5")
+        req.addOption("--extractor-retries", "3")
+        req.addOption("--socket-timeout", "20")
+        req.addOption("--concurrent-fragments", "4")
+        if (ytClient != null) req.addOption("--extractor-args", "youtube:player_client=$ytClient")
+        applyAuthBlocking(req, info.pageUrl)
         val name = if (all) "%(playlist_index)s - %(title).70s [%(id)s].%(ext)s" else "%(title).70s [%(id)s].%(ext)s"
         req.addOption("-o", File(tmpDir, name).absolutePath)
-        req.addOption("-v")
         if (kind == Kind.VIDEO) {
             val h = height?.let { "[height<=$it]" } ?: ""
             val progressiveFirst = Site.forUrl(info.pageUrl) == Site.INSTAGRAM
@@ -152,17 +268,7 @@ object Engine {
             req.addOption("--audio-quality", "0")
             req.addOption("--embed-metadata")
         }
-        try {
-            YoutubeDL.getInstance().execute(req, id) { progress, _, _ ->
-                if (progress >= 0f) onProgress((progress / 100f).coerceIn(0f, 1f))
-            }
-        } catch (e: Exception) {
-            // A playlist with some unavailable items still yields the rest.
-            if (!all || DownloadCenter.canceled.contains(id) || outputs(tmpDir).isEmpty()) throw e
-        }
-        val files = outputs(tmpDir)
-        if (files.isEmpty()) throw IllegalStateException("no output file")
-        files
+        return req
     }
 
     private fun outputs(dir: File): List<File> = dir.listFiles().orEmpty().filter {

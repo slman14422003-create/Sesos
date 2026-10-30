@@ -34,7 +34,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 info = Engine.analyze(u)
             } catch (t: Throwable) {
-                val m = (t.message ?: "")
+                val m = Engine.friendly(t)
                 val needLogin = Regex("login|cookies|rate-limit|sign in", RegexOption.IGNORE_CASE).containsMatchIn(m)
                 error = str(R.string.analyze_failed, m.take(200)) +
                     if (needLogin) "\n\n" + str(R.string.need_login_hint) else ""

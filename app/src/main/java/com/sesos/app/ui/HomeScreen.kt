@@ -96,10 +96,10 @@ fun HomeScreen(vm: MainViewModel, s: SearchViewModel) {
         contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.lg, top = Spacing.sm, bottom = inset),
         verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
-        item {
+        item(key = "title") {
             Text("Sesos", style = MaterialTheme.typography.displaySmall, modifier = Modifier.padding(top = Spacing.sm))
         }
-        item {
+        item(key = "searchbar") {
             SearchBar(
                 value = s.text,
                 onValue = { s.text = it },
@@ -217,15 +217,15 @@ private fun LazyListScope.idleSection(s: SearchViewModel) {
                 TextButton(onClick = { s.clearRecents() }) { Text(stringResource(R.string.clear)) }
             }
         }
-        items(s.recents) { q -> RecentRow(q) { s.search(q) } }
+        items(s.recents, key = { "recent-$it" }) { q -> RecentRow(q, Modifier.animateItem()) { s.search(q) } }
     }
     item { SectionTitle(stringResource(R.string.browse)) }
-    items(categories.chunked(2)) { pair ->
+    items(categories.chunked(2), key = { row -> "cat-" + row.first().query }) { pair ->
         val ctx = LocalContext.current
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
             pair.forEach { c ->
                 val idx = categories.indexOf(c)
-                CategoryCard(Modifier.weight(1f), stringResource(c.label), idx) { s.search(ctx.getString(c.query)) }
+                CategoryCard(Modifier.weight(1f).staggerIn(idx), stringResource(c.label), idx) { s.search(ctx.getString(c.query)) }
             }
             if (pair.size == 1) Spacer(Modifier.weight(1f))
         }
@@ -233,9 +233,9 @@ private fun LazyListScope.idleSection(s: SearchViewModel) {
 }
 
 @Composable
-private fun RecentRow(q: String, onClick: () -> Unit) {
+private fun RecentRow(q: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(Corners.md))
             .bounceClick(onClick)
@@ -311,14 +311,14 @@ private fun LazyListScope.searchSection(
         playlistSection(s, vm, p, downloads, onTrackDownload)
         return
     }
-    item { TabsRow(s) }
+    item(key = "tabs") { TabsRow(s) }
     when (s.tab) {
         SearchTab.SONGS -> {
             if (s.songsLoading) item { Busy(stringResource(R.string.searching)) }
             s.songsError?.let { e -> item { ErrorText(stringResource(R.string.search_failed, e)) } }
             if (!s.songsLoading && s.songsError == null && s.songs.isEmpty()) item { EmptyText(stringResource(R.string.no_results)) }
-            items(s.songs) { t ->
-                TrackRow(t, downloads.firstOrNull { it.url == t.url && it.kind == Kind.AUDIO }, { s.openOptions(t, vm) }) {
+            items(s.songs, key = { it.id }) { t ->
+                TrackRow(t, Modifier.animateItem(), downloads.firstOrNull { it.url == t.url && it.kind == Kind.AUDIO }, { s.openOptions(t, vm) }) {
                     onTrackDownload(t)
                 }
             }
@@ -327,7 +327,7 @@ private fun LazyListScope.searchSection(
             if (s.listsLoading) item { Busy(stringResource(R.string.searching)) }
             s.listsError?.let { e -> item { ErrorText(stringResource(R.string.search_failed, e)) } }
             if (!s.listsLoading && s.listsError == null && s.lists.isEmpty()) item { EmptyText(stringResource(R.string.no_results)) }
-            items(s.lists) { l -> PlaylistRow(l) { s.openPlaylist(l) } }
+            items(s.lists, key = { it.id }) { l -> PlaylistRow(l, Modifier.animateItem()) { s.openPlaylist(l) } }
         }
     }
 }
@@ -374,8 +374,8 @@ private fun LazyListScope.playlistSection(
     if (s.tracksLoading) item { Busy(stringResource(R.string.playlist_loading)) }
     s.tracksError?.let { e -> item { ErrorText(stringResource(R.string.search_failed, e)) } }
     if (!s.tracksLoading && s.tracksError == null && s.tracks.isEmpty()) item { EmptyText(stringResource(R.string.no_results)) }
-    items(s.tracks) { t ->
-        TrackRow(t, downloads.firstOrNull { it.url == t.url && it.kind == Kind.AUDIO }, { s.openOptions(t, vm) }) {
+    items(s.tracks, key = { it.id }) { t ->
+        TrackRow(t, Modifier.animateItem(), downloads.firstOrNull { it.url == t.url && it.kind == Kind.AUDIO }, { s.openOptions(t, vm) }) {
             onTrackDownload(t)
         }
     }
@@ -415,12 +415,12 @@ private fun TabsRow(s: SearchViewModel) {
 }
 
 @Composable
-private fun TrackRow(t: Yt.Track, state: DownloadItem?, onOpen: () -> Unit, onDownload: () -> Unit) {
+private fun TrackRow(t: Yt.Track, modifier: Modifier, state: DownloadItem?, onOpen: () -> Unit, onDownload: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(Corners.lg),
         color = MaterialTheme.colorScheme.surfaceContainer,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
         Row(
             Modifier.fillMaxWidth().bounceClick(onOpen).padding(Spacing.sm),
@@ -445,12 +445,12 @@ private fun TrackRow(t: Yt.Track, state: DownloadItem?, onOpen: () -> Unit, onDo
 }
 
 @Composable
-private fun PlaylistRow(l: Yt.Playlist, onOpen: () -> Unit) {
+private fun PlaylistRow(l: Yt.Playlist, modifier: Modifier, onOpen: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(Corners.lg),
         color = MaterialTheme.colorScheme.surfaceContainer,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
         Row(
             Modifier.fillMaxWidth().bounceClick(onOpen).padding(Spacing.sm),

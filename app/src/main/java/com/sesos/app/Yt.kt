@@ -3,6 +3,7 @@ package com.sesos.app
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -21,7 +22,20 @@ object Yt {
     private fun JSONObject.str(key: String): String? =
         if (isNull(key)) null else optString(key).takeIf { it.isNotBlank() && it != "null" }
 
-    private suspend fun flat(target: String, end: Int): JSONArray = withContext(Dispatchers.IO) {
+    // searches get their own small pool so they never queue behind downloads
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val searchPool = Dispatchers.IO.limitedParallelism(3)
+
+    // repeated searches/categories open instantly for 10 minutes
+    private val cache = object : LinkedHashMap<String, Pair<Long, JSONArray>>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<Long, JSONArray>>?) = size > 24
+    }
+
+    private suspend fun flat(target: String, end: Int): JSONArray = withContext(searchPool) {
+        val key = "$end|$target"
+        synchronized(cache) { cache[key] }?.let { (t, arr) ->
+            if (System.currentTimeMillis() - t < 600_000L) return@withContext arr
+        }
         Engine.ready()
         val req = YoutubeDLRequest(target)
         req.addOption("--flat-playlist")
@@ -32,7 +46,9 @@ object Yt {
         val out = resp.out.trim()
         val start = out.indexOf('{')
         if (start < 0) throw IllegalStateException("empty response")
-        JSONObject(out.substring(start)).optJSONArray("entries") ?: JSONArray()
+        val arr = JSONObject(out.substring(start)).optJSONArray("entries") ?: JSONArray()
+        if (arr.length() > 0) synchronized(cache) { cache[key] = System.currentTimeMillis() to arr }
+        arr
     }
 
     private fun tracks(arr: JSONArray): List<Track> {
@@ -45,7 +61,7 @@ object Yt {
             if (title.startsWith("[Private") || title.startsWith("[Deleted")) continue
             res.add(Track(id, title, o.str("channel") ?: o.str("uploader"), o.optDouble("duration", 0.0).toInt()))
         }
-        return res
+        return res.distinctBy { it.id }
     }
 
     suspend fun searchSongs(query: String): List<Track> {
@@ -73,7 +89,7 @@ object Yt {
             if (thumb != null && thumb.startsWith("//")) thumb = "https:$thumb"
             res.add(Playlist(id, title, o.str("channel") ?: o.str("uploader"), o.optInt("playlist_count", 0), thumb))
         }
-        return res
+        return res.distinctBy { it.id }
     }
 
     suspend fun playlistTracks(p: Playlist): List<Track> = tracks(flat(p.url, 200))

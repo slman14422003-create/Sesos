@@ -1,6 +1,9 @@
 package com.sesos.app.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -15,12 +18,15 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -113,12 +119,16 @@ private val AppShapes = Shapes(
 
 @Composable
 fun SesosTheme(content: @Composable () -> Unit) {
+    val scheme = if (isSystemInDarkTheme()) DarkColors else LightColors
     MaterialTheme(
-        colorScheme = if (isSystemInDarkTheme()) DarkColors else LightColors,
+        colorScheme = scheme,
         typography = AppTypography,
-        shapes = AppShapes,
-        content = content
-    )
+        shapes = AppShapes
+    ) {
+        // Text outside a Surface used the default BLACK content colour -> invisible on the black
+        // dark background (titles, "Browse", recent searches). Always provide the theme's colour.
+        CompositionLocalProvider(LocalContentColor provides scheme.onBackground, content = content)
+    }
 }
 
 object Motion {
@@ -177,4 +187,16 @@ fun CircleButton(
             .bounceClick(onClick),
         contentAlignment = Alignment.Center
     ) { content() }
+}
+
+/** Soft fade + rise on first appearance, staggered by [index]. */
+fun Modifier.staggerIn(index: Int, stepMs: Int = 45): Modifier = composed {
+    val a = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        a.animateTo(1f, tween(Motion.Slow, delayMillis = index.coerceAtMost(10) * stepMs, easing = FastOutSlowInEasing))
+    }
+    graphicsLayer {
+        alpha = a.value
+        translationY = (1f - a.value) * 22.dp.toPx()
+    }
 }

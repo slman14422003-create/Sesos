@@ -90,7 +90,7 @@ fun LibraryScreen() {
         contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.lg, top = Spacing.sm, bottom = inset),
         verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
-        item {
+        item(key = "title") {
             Text(
                 stringResource(R.string.lib_title),
                 style = MaterialTheme.typography.displaySmall,
@@ -100,10 +100,10 @@ fun LibraryScreen() {
 
         if (active.isNotEmpty()) {
             item { SectionTitle(stringResource(R.string.lib_active)) }
-            items(active) { d -> DownloadRow(d) }
+            items(active, key = { it.id }) { d -> DownloadRow(d, Modifier.animateItem()) }
         }
 
-        item {
+        item(key = "filters") {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 val labels = listOf(R.string.filter_all, R.string.filter_audio, R.string.filter_video, R.string.filter_images)
                 labels.forEachIndexed { i, l ->
@@ -133,9 +133,10 @@ fun LibraryScreen() {
             }
         }
 
-        items(shown) { f ->
+        items(shown, key = { it.uri.toString() }) { f ->
             FileRow(
                 f,
+                Modifier.animateItem(),
                 onOpen = { ctx.openUri(f.uri, f.mime) },
                 onShare = { ctx.shareUri(f.uri, f.mime) },
                 onDelete = { toDelete = f }
@@ -179,13 +180,13 @@ private fun FilterPill(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun FileRow(f: SavedFile, onOpen: () -> Unit, onShare: () -> Unit, onDelete: () -> Unit) {
+private fun FileRow(f: SavedFile, modifier: Modifier, onOpen: () -> Unit, onShare: () -> Unit, onDelete: () -> Unit) {
     val ctx = LocalContext.current
     Surface(
         shape = RoundedCornerShape(Corners.lg),
         color = MaterialTheme.colorScheme.surfaceContainer,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
         Row(
             Modifier.fillMaxWidth().bounceClick(onOpen).padding(Spacing.sm),
@@ -233,8 +234,8 @@ private fun FileThumb(f: SavedFile, size: Dp) {
         Thumb(f.uri, size, placeholder)
         return
     }
-    val bmp by produceState<Bitmap?>(null, f.uri) {
-        value = withContext(Dispatchers.IO) { loadThumb(ctx, f.uri) }
+    val bmp by produceState<Bitmap?>(ThumbCache.get(f.uri), f.uri) {
+        if (value == null) value = withContext(Dispatchers.IO) { loadThumb(ctx, f.uri)?.also { ThumbCache.put(f.uri, it) } }
     }
     val b = bmp
     if (b == null) {
@@ -254,4 +255,11 @@ private fun FileThumb(f: SavedFile, size: Dp) {
 private fun loadThumb(ctx: Context, uri: Uri): Bitmap? {
     if (Build.VERSION.SDK_INT < 29) return null
     return try { ctx.contentResolver.loadThumbnail(uri, Size(256, 256), null) } catch (_: Throwable) { null }
+}
+
+/** Keeps recently decoded video/audio thumbnails so scrolling back never reloads them. */
+private object ThumbCache {
+    private val lru = android.util.LruCache<String, Bitmap>(96)
+    fun get(u: Uri): Bitmap? = lru.get(u.toString())
+    fun put(u: Uri, b: Bitmap) { lru.put(u.toString(), b) }
 }

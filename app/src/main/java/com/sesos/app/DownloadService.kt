@@ -16,13 +16,18 @@ import com.yausername.youtubedl_android.YoutubeDL
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 
 class DownloadService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val active = AtomicInteger(0)
+    // at most 3 yt-dlp processes at once: keeps the phone cool and the UI smooth
+    private val gate = Semaphore(3)
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -52,8 +57,11 @@ class DownloadService : Service() {
         scope.launch {
             val tmp = File(cacheDir, "dl/$id")
             try {
-                val files = Engine.download(id, info, kind, height, all, tmp) { p ->
-                    DownloadCenter.update(id) { it.copy(progress = p) }
+                val files = gate.withPermit {
+                    if (DownloadCenter.canceled.contains(id)) throw IllegalStateException("canceled")
+                    Engine.download(id, info, kind, height, all, tmp) { p ->
+                        DownloadCenter.update(id) { it.copy(progress = p) }
+                    }
                 }
                 var last: Pair<android.net.Uri, String>? = null
                 for (f in files) last = MediaSaver.save(this@DownloadService, f, kind)
@@ -65,7 +73,7 @@ class DownloadService : Service() {
                     DownloadCenter.update(id) { it.copy(status = Status.CANCELED) }
                 } else {
                     DownloadCenter.update(id) {
-                        it.copy(status = Status.ERROR, message = (t.message ?: t.javaClass.simpleName).let { m -> if (m.length > 600) "..." + m.takeLast(600) else m })
+                        it.copy(status = Status.ERROR, message = Engine.friendly(t))
                     }
                 }
             } finally {
@@ -80,6 +88,7 @@ class DownloadService : Service() {
     }
 
     override fun onDestroy() {
+        scope.cancel()
         super.onDestroy()
     }
 
@@ -123,7 +132,12 @@ class DownloadService : Service() {
                 .putExtra(EX_ALL, all)
                 .putExtra(EX_IMAGE, info.imageUrl)
                 .putExtra(EX_THUMB, info.thumbnail)
-            ContextCompat.startForegroundService(ctx, i)
+            try {
+                ContextCompat.startForegroundService(ctx, i)
+            } catch (t: Throwable) {
+                // background-start restrictions: fall back to a plain service start
+                try { ctx.startService(i) } catch (_: Throwable) {}
+            }
         }
 
         fun cancel(id: String) {

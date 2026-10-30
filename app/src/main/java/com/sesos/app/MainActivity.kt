@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.LaunchedEffect
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.sesos.app.ui.AppShell
 
 class MainActivity : ComponentActivity() {
@@ -18,6 +19,8 @@ class MainActivity : ComponentActivity() {
     private val search: SearchViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // system splash = same icon/background as the animated overlay; hand over with no extra fade
+        installSplashScreen().setOnExitAnimationListener { it.remove() }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         if (savedInstanceState == null) handle(intent)

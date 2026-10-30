@@ -1,7 +1,23 @@
 package com.sesos.app.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.launch
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
@@ -74,35 +90,75 @@ fun AppShell(vm: MainViewModel, search: SearchViewModel) {
     }
     BackHandler(enabled = tab != NavTab.HOME) { tab = NavTab.HOME }
 
+    var showSplash by rememberSaveable { mutableStateOf(true) }
+    val reveal = remember { Animatable(if (showSplash) 0f else 1f) }
+    val scope = rememberCoroutineScope()
+
     SesosTheme {
         val density = LocalDensity.current
         val imeOpen = WindowInsets.ime.getBottom(density) > 0
         val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-            CompositionLocalProvider(LocalBarInset provides navBottom + 100.dp) {
-                Box(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
-                    Crossfade(targetState = tab, label = "tab") { t ->
-                        when (t) {
-                            NavTab.HOME -> HomeScreen(vm, search)
-                            NavTab.LIBRARY -> LibraryScreen()
-                            NavTab.SETTINGS -> SettingsScreen(vm)
+            // the whole app eases in behind the splash (slight zoom + fade)
+            Box(
+                Modifier.fillMaxSize().graphicsLayer {
+                    val p = reveal.value
+                    alpha = 0.35f + 0.65f * p
+                    scaleX = 0.97f + 0.03f * p
+                    scaleY = 0.97f + 0.03f * p
+                }
+            ) {
+                CompositionLocalProvider(LocalBarInset provides navBottom + 100.dp) {
+                    Box(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
+                        AnimatedContent(
+                            targetState = tab,
+                            transitionSpec = {
+                                val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
+                                (fadeIn(tween(280, delayMillis = 70, easing = FastOutSlowInEasing)) +
+                                    slideInHorizontally(tween(340, easing = FastOutSlowInEasing)) { dir * it / 8 } +
+                                    scaleIn(tween(340, easing = FastOutSlowInEasing), initialScale = 0.97f))
+                                    .togetherWith(
+                                        fadeOut(tween(160)) +
+                                            slideOutHorizontally(tween(280, easing = FastOutSlowInEasing)) { -dir * it / 10 }
+                                    )
+                                    .using(SizeTransform(clip = false))
+                            },
+                            label = "tab"
+                        ) { t ->
+                            when (t) {
+                                NavTab.HOME -> HomeScreen(vm, search)
+                                NavTab.LIBRARY -> LibraryScreen()
+                                NavTab.SETTINGS -> SettingsScreen(vm)
+                            }
                         }
                     }
                 }
+
+                SnackbarHost(
+                    snack,
+                    Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 92.dp)
+                )
+
+                AnimatedVisibility(
+                    visible = !imeOpen && !showSplash,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    enter = slideInVertically(tween(420, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(300)),
+                    exit = slideOutVertically(tween(220)) { it } + fadeOut(tween(160))
+                ) {
+                    FloatingNavBar(
+                        selected = tab,
+                        busy = downloads.any { it.status == Status.RUNNING },
+                        onSelect = { tab = it },
+                        modifier = Modifier.navigationBarsPadding().padding(bottom = 14.dp)
+                    )
+                }
             }
 
-            SnackbarHost(
-                snack,
-                Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 92.dp)
-            )
-
-            if (!imeOpen) {
-                FloatingNavBar(
-                    selected = tab,
-                    busy = downloads.any { it.status == Status.RUNNING },
-                    onSelect = { tab = it },
-                    modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 14.dp)
+            if (showSplash) {
+                SplashOverlay(
+                    onRevealStart = { scope.launch { reveal.animateTo(1f, tween(520, easing = FastOutSlowInEasing)) } },
+                    onDone = { showSplash = false }
                 )
             }
         }

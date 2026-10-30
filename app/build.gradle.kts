@@ -87,6 +87,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.webkit:webkit:1.14.0")
+    implementation("androidx.core:core-splashscreen:1.0.1")
 
     // Real Firefox engine (not WebView): Meta pages render and log in normally.
     // Release 159 needs compileSdk 37 which the CI image lacks, so stay on the 147 line.

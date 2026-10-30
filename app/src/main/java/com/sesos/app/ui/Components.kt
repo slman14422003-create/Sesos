@@ -4,6 +4,11 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -108,8 +113,9 @@ internal fun Thumb(model: Any?, size: Dp, placeholder: Int, modifier: Modifier =
 internal fun DownloadAction(state: DownloadItem?, onDownload: () -> Unit) {
     Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
         if (state != null && state.status == Status.RUNNING) {
+            val smooth by animateFloatAsState(state.progress, tween(350, easing = LinearEasing), label = "ring")
             if (state.progress > 0f) CircularProgressIndicator(
-                progress = { state.progress },
+                progress = { smooth },
                 modifier = Modifier.size(30.dp),
                 strokeWidth = 3.dp
             ) else CircularProgressIndicator(modifier = Modifier.size(30.dp), strokeWidth = 3.dp)
@@ -226,8 +232,10 @@ internal fun InfoCard(info: MediaInfo, vm: MainViewModel) {
 }
 
 @Composable
-internal fun DownloadRow(d: DownloadItem) {
-    SesosCard {
+internal fun DownloadRow(d: DownloadItem, modifier: Modifier = Modifier) {
+    val ctx = LocalContext.current
+    val smooth by animateFloatAsState(d.progress, tween(350, easing = LinearEasing), label = "bar")
+    SesosCard(modifier) {
         Row(Modifier.padding(Spacing.md), horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
             if (d.thumbnail != null) Thumb(d.thumbnail, 56.dp, R.drawable.ic_music_note)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -235,7 +243,7 @@ internal fun DownloadRow(d: DownloadItem) {
                 when (d.status) {
                     Status.RUNNING -> {
                         if (d.progress > 0f) LinearProgressIndicator(
-                            progress = { d.progress },
+                            progress = { smooth },
                             modifier = Modifier.fillMaxWidth().clip(CircleShape),
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
@@ -268,14 +276,28 @@ internal fun DownloadRow(d: DownloadItem) {
                         }
                     }
                     Status.ERROR -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        val m = d.message.orEmpty()
                         Text(
-                            stringResource(R.string.download_failed, d.message ?: ""),
+                            stringResource(R.string.download_failed, m),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
-                            maxLines = 6,
+                            maxLines = 3,
                             overflow = TextOverflow.Ellipsis
                         )
+                        if (m.contains("403") || m.contains("forbidden", true)) Text(
+                            stringResource(R.string.err_hint_403),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            if (d.url != null) TextButton(onClick = {
+                                DownloadCenter.remove(d.id)
+                                DownloadService.start(
+                                    ctx,
+                                    MediaInfo(d.url, d.title, d.thumbnail, null, 0, emptyList(), false, true, null),
+                                    d.kind, null, false
+                                )
+                            }) { Text(stringResource(R.string.retry)) }
                             TextButton(onClick = { DownloadCenter.remove(d.id) }) {
                                 Text(stringResource(R.string.hide), color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
