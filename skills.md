@@ -96,3 +96,7 @@
 - الأيقونة: خلفية زرقاء متدرجة (drawable/ic_launcher_bg) + حرف S أبيض أكبر + شارة تحميل بيضاء بسهم أزرق. الطبقات splash_s وsplash_badge أعيد رسمها، وخلفية الـ splash color/splash_bg بنفس الأزرق
 - المعاينة: زر تشغيل فوق صورة كل نتيجة أغاني → VideoPreviewDialog (media3 ExoPlayer). Engine.streamUrl يجلب رابط mp4/HLS حتى 480p عبر yt-dlp بنفس عملاء يوتيوب، وعند فشل التشغيل ينتقل للعميل التالي. من النافذة: تنزيل فيديو أو MP3
 - لم يُجرَّب البناء
+
+## إصلاح: فشل packageRelease (Password is not ASCII)
+- الترجمة نجحت؛ الفشل بالتوقيع لأن سر KEY_PASSWORD في GitHub فيه سطر جديد/رموز غير مرئية
+- build.gradle.kts يستخدم cleanSecret لتنظيف KEYSTORE_PASSWORD وKEY_ALIAS وKEY_PASSWORD (ASCII المطبوع فقط)
