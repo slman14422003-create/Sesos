@@ -103,4 +103,9 @@
     <string name="version_label">Version %1$s</string>
     <string name="retry">Retry</string>
     <string name="err_hint_403">YouTube refused the request. The engine updates itself automatically; retry in a moment or update it from Settings.</string>
+    <string name="preview">Preview</string>
+    <string name="preview_loading">Preparing video…</string>
+    <string name="preview_failed">Couldn\'t play the preview</string>
+    <string name="preview_download_video">Download video</string>
+    <string name="preview_download_mp3">Download MP3</string>
 </resources>

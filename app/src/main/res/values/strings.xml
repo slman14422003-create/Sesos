@@ -103,4 +103,9 @@
     <string name="version_label">الإصدار %1$s</string>
     <string name="retry">إعادة المحاولة</string>
     <string name="err_hint_403">يوتيوب رفض الطلب. المحرك يتحدّث تلقائيًا؛ أعد المحاولة بعد لحظات أو من الإعدادات حدّث المحرك.</string>
+    <string name="preview">معاينة</string>
+    <string name="preview_loading">جارٍ تجهيز الفيديو…</string>
+    <string name="preview_failed">تعذّر تشغيل المعاينة</string>
+    <string name="preview_download_video">تنزيل فيديو</string>
+    <string name="preview_download_mp3">تنزيل MP3</string>
 </resources>

@@ -90,3 +90,9 @@
 - الأنيميشن: AnimatedContent للتبديل بين التبويبات، شريط التنقل ينزلق، animateItem بمفاتيح ثابتة بكل القوائم، staggerIn لبطاقات التصنيفات، شريط تقدم ناعم، كاش لصور المكتبة
 - Splash: core-splashscreen + SplashOverlay.kt (نفس الأيقونة والخلفية، حرف S يتنفس، شارة التحميل ترتفع وترتد، موجة دائرية، ثم تكبير واختفاء). الطبقتان splash_s.png وsplash_badge.png مقتطعتان من أيقونة التطبيق
 - لم يُجرَّب البناء. إن ظهر خطأ ترجمة نصلحه: أرجح موضع هو YoutubeDL.UpdateChannel.NIGHTLY (يمكن استبداله بـ STABLE)
+
+## مهمة: مفتاح ريليس 40 سنة + أيقونة جديدة + معاينة الفيديو
+- المفتاح: sesos-release.jks (PKCS12, RSA 4096, alias sesos, صلاحية 14600 يوم حتى 2066) خارج المشروع؛ يُرفع كأسرار GitHub: KEYSTORE_BASE64 وKEYSTORE_PASSWORD وKEY_ALIAS وKEY_PASSWORD
+- الأيقونة: خلفية زرقاء متدرجة (drawable/ic_launcher_bg) + حرف S أبيض أكبر + شارة تحميل بيضاء بسهم أزرق. الطبقات splash_s وsplash_badge أعيد رسمها، وخلفية الـ splash color/splash_bg بنفس الأزرق
+- المعاينة: زر تشغيل فوق صورة كل نتيجة أغاني → VideoPreviewDialog (media3 ExoPlayer). Engine.streamUrl يجلب رابط mp4/HLS حتى 480p عبر yt-dlp بنفس عملاء يوتيوب، وعند فشل التشغيل ينتقل للعميل التالي. من النافذة: تنزيل فيديو أو MP3
+- لم يُجرَّب البناء
