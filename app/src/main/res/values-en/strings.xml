@@ -101,4 +101,6 @@
     <string name="storage_note">Audio goes to Music/Sesos, video to Movies/Sesos and images to Pictures/Sesos</string>
     <string name="about_section">About</string>
     <string name="version_label">Version %1$s</string>
+    <string name="retry">Retry</string>
+    <string name="err_hint_403">YouTube refused the request. The engine updates itself automatically; retry in a moment or update it from Settings.</string>
 </resources>

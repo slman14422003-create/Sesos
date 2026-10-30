@@ -77,3 +77,16 @@
 - فشل البناء بـ Conflicting overloads لـ InfoCard وContext.open لأن نسخ الحزمة فوق المستودع لا يحذف SesosScreen.kt القديم
 - الحل: الملف موجود الآن ويحتوي سطر package فقط حتى يستبدل القديم عند النسخ. يمكن حذفه يدويًا لاحقًا
 - درس: عند حذف ملف من المشروع اترك بدله ملفًا فارغًا في الحزمة، أو احذفه يدويًا من المستودع
+
+## مهمة: فشل التحميل + واجهة سلسة + splash متحركة
+- سبب النص الفارغ بالرئيسية: Text خارج Surface يأخذ لون Black الافتراضي فيختفي على الخلفية السوداء. الحل: SesosTheme يوفّر LocalContentColor = onBackground
+- فشل التحميل: الـ traceback ينتهي غالبًا بـ HTTP 403 من يوتيوب (عميلا android_vr وandroid_sdkless محجوبان). الحل في Engine.kt:
+  - إزالة -v (كان يملأ رسالة الخطأ بالـ traceback)
+  - تجربة عملاء يوتيوب بالتسلسل: default بدون android_vr، ثم tv/web_safari/mweb، ثم ios/web_safari
+  - عند 403 أو sign in أو nsig: تحديث yt-dlp (قناة NIGHTLY) مرة واحدة ثم إعادة المحاولة
+  - تحديث صامت بالخلفية عند التشغيل كل 12 ساعة (Engine.autoUpdate)
+  - Engine.friendly يختصر الخطأ إلى سطر واحد، وبطاقة الخطأ فيها زر إعادة المحاولة
+- الخيوط: DownloadService حتى 3 تنزيلات معًا (Semaphore) وإلغاء الـ scope عند الإغلاق، البحث بمجمّع خاص limitedParallelism(3) مع كاش 10 دقائق (Yt.kt)، تحديثات التقدم كل 1% فقط
+- الأنيميشن: AnimatedContent للتبديل بين التبويبات، شريط التنقل ينزلق، animateItem بمفاتيح ثابتة بكل القوائم، staggerIn لبطاقات التصنيفات، شريط تقدم ناعم، كاش لصور المكتبة
+- Splash: core-splashscreen + SplashOverlay.kt (نفس الأيقونة والخلفية، حرف S يتنفس، شارة التحميل ترتفع وترتد، موجة دائرية، ثم تكبير واختفاء). الطبقتان splash_s.png وsplash_badge.png مقتطعتان من أيقونة التطبيق
+- لم يُجرَّب البناء. إن ظهر خطأ ترجمة نصلحه: أرجح موضع هو YoutubeDL.UpdateChannel.NIGHTLY (يمكن استبداله بـ STABLE)

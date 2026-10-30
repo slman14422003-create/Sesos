@@ -101,4 +101,6 @@
     <string name="storage_note">الصوت في Music/Sesos والفيديو في Movies/Sesos والصور في Pictures/Sesos</string>
     <string name="about_section">حول التطبيق</string>
     <string name="version_label">الإصدار %1$s</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="err_hint_403">يوتيوب رفض الطلب. المحرك يتحدّث تلقائيًا؛ أعد المحاولة بعد لحظات أو من الإعدادات حدّث المحرك.</string>
 </resources>
