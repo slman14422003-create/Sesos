@@ -271,6 +271,21 @@ object Engine {
         return req
     }
 
+    val streamAttempts: Int get() = ytClients.size
+
+    /** Direct playable URL (progressive mp4 <=480p with audio, or HLS) for the in-app preview. */
+    suspend fun streamUrl(url: String, attempt: Int): String = withContext(Dispatchers.IO) {
+        await()
+        val req = YoutubeDLRequest(url)
+        req.addOption("--no-playlist")
+        req.addOption("--no-warnings")
+        req.addOption("--socket-timeout", "20")
+        req.addOption("-f", "b[ext=mp4][height<=480]/b[height<=480]/b[ext=mp4]/b")
+        if (isYoutube(url)) req.addOption("--extractor-args", "youtube:player_client=" + ytClients[attempt.coerceIn(0, ytClients.lastIndex)])
+        val info = YoutubeDL.getInstance().getInfo(req)
+        info.url?.takeIf { it.isNotBlank() } ?: throw IllegalStateException("no stream url")
+    }
+
     private fun outputs(dir: File): List<File> = dir.listFiles().orEmpty().filter {
         it.isFile && !it.name.endsWith(".part") && !it.name.endsWith(".ytdl") && !it.name.endsWith(".temp")
     }.sortedBy { it.name }

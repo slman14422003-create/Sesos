@@ -89,6 +89,11 @@ dependencies {
     implementation("androidx.webkit:webkit:1.14.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
 
+    // in-app video preview (progressive mp4 / HLS) before downloading
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-exoplayer-hls:1.4.1")
+    implementation("androidx.media3:media3-ui:1.4.1")
+
     // Real Firefox engine (not WebView): Meta pages render and log in normally.
     // Release 159 needs compileSdk 37 which the CI image lacks, so stay on the 147 line.
     // After a green build, replace the range with the exact version Gradle resolved.

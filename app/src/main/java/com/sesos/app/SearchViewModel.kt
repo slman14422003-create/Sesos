@@ -34,6 +34,8 @@ class SearchViewModel(app: Application) : AndroidViewModel(app) {
     var tracksLoading by mutableStateOf(false)
     var tracksError by mutableStateOf<String?>(null)
 
+    var preview by mutableStateOf<Yt.Track?>(null)
+
     var recents by mutableStateOf(loadRecents())
 
     private var songsSeq = 0

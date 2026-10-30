@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -134,6 +135,23 @@ fun HomeScreen(vm: MainViewModel, s: SearchViewModel) {
                 vm.message = started
             }
         }
+    }
+
+    s.preview?.let { t ->
+        VideoPreviewDialog(
+            track = t,
+            onDismiss = { s.preview = null },
+            onDownloadAudio = { startTrackDownload(ctx, t); vm.message = started; s.preview = null },
+            onDownloadVideo = {
+                DownloadService.start(
+                    ctx,
+                    MediaInfo(t.url, t.title, t.thumb, t.channel, t.duration, emptyList(), true, true, null),
+                    Kind.VIDEO, null, false
+                )
+                vm.message = started
+                s.preview = null
+            }
+        )
     }
 }
 
@@ -318,7 +336,7 @@ private fun LazyListScope.searchSection(
             s.songsError?.let { e -> item { ErrorText(stringResource(R.string.search_failed, e)) } }
             if (!s.songsLoading && s.songsError == null && s.songs.isEmpty()) item { EmptyText(stringResource(R.string.no_results)) }
             items(s.songs, key = { it.id }) { t ->
-                TrackRow(t, Modifier.animateItem(), downloads.firstOrNull { it.url == t.url && it.kind == Kind.AUDIO }, { s.openOptions(t, vm) }) {
+                TrackRow(t, Modifier.animateItem(), downloads.firstOrNull { it.url == t.url && it.kind == Kind.AUDIO }, { s.openOptions(t, vm) }, { s.preview = t }) {
                     onTrackDownload(t)
                 }
             }
@@ -375,7 +393,7 @@ private fun LazyListScope.playlistSection(
     s.tracksError?.let { e -> item { ErrorText(stringResource(R.string.search_failed, e)) } }
     if (!s.tracksLoading && s.tracksError == null && s.tracks.isEmpty()) item { EmptyText(stringResource(R.string.no_results)) }
     items(s.tracks, key = { it.id }) { t ->
-        TrackRow(t, Modifier.animateItem(), downloads.firstOrNull { it.url == t.url && it.kind == Kind.AUDIO }, { s.openOptions(t, vm) }) {
+        TrackRow(t, Modifier.animateItem(), downloads.firstOrNull { it.url == t.url && it.kind == Kind.AUDIO }, { s.openOptions(t, vm) }, { s.preview = t }) {
             onTrackDownload(t)
         }
     }
@@ -415,7 +433,7 @@ private fun TabsRow(s: SearchViewModel) {
 }
 
 @Composable
-private fun TrackRow(t: Yt.Track, modifier: Modifier, state: DownloadItem?, onOpen: () -> Unit, onDownload: () -> Unit) {
+private fun TrackRow(t: Yt.Track, modifier: Modifier, state: DownloadItem?, onOpen: () -> Unit, onPreview: () -> Unit, onDownload: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(Corners.lg),
         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -427,7 +445,19 @@ private fun TrackRow(t: Yt.Track, modifier: Modifier, state: DownloadItem?, onOp
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
-            Thumb(t.thumb, 64.dp, R.drawable.ic_music_note)
+            Box(contentAlignment = Alignment.Center) {
+                Thumb(t.thumb, 64.dp, R.drawable.ic_music_note)
+                Box(
+                    Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.55f))
+                        .bounceClick(onPreview),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.preview), tint = Color.White, modifier = Modifier.size(22.dp))
+                }
+            }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                 Text(t.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 val sub = listOfNotNull(t.channel, t.duration.takeIf { it > 0 }?.let { fmtDuration(it) }).joinToString(" • ")

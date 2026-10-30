@@ -9,7 +9,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -37,8 +36,8 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun SplashOverlay(onRevealStart: () -> Unit, onDone: () -> Unit) {
-    val bg = if (isSystemInDarkTheme()) Color.Black else Color.White
-    val ringColor = Accent
+    val bg = Color(0xFF2B68EA)
+    val ringColor = Color.White
 
     val sScale = remember { Animatable(1f) }
     val badgeLift = remember { Animatable(0f) }     // 0 = home position, 1 = raised
@@ -93,10 +92,10 @@ fun SplashOverlay(onRevealStart: () -> Unit, onDone: () -> Unit) {
             Canvas(Modifier.fillMaxSize()) {
                 val r = ring.value
                 if (r > 0f && r < 1f) {
-                    val c = Offset(size.width * 0.676f, size.height * 0.679f)
+                    val c = Offset(size.width * 0.634f, size.height * 0.655f)
                     drawCircle(
                         color = ringColor.copy(alpha = 0.45f * (1f - r)),
-                        radius = size.width * (0.075f + 0.38f * r),
+                        radius = size.width * (0.095f + 0.40f * r),
                         center = c,
                         style = Stroke(width = size.width * 0.012f * (1f - r) + 1f)
                     )
@@ -118,7 +117,7 @@ fun SplashOverlay(onRevealStart: () -> Unit, onDone: () -> Unit) {
                     scaleX = badgeScale.value
                     scaleY = badgeScale.value
                     // scale around the badge centre, not the canvas centre
-                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.676f, 0.679f)
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.634f, 0.655f)
                 }
             )
         }
