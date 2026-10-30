@@ -23,5 +23,7 @@ data class DownloadItem(
     val status: Status = Status.RUNNING,
     val message: String? = null,
     val uri: String? = null,
-    val mime: String? = null
+    val mime: String? = null,
+    val url: String? = null,
+    val thumbnail: String? = null
 )

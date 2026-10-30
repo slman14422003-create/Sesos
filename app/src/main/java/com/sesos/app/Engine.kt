@@ -45,6 +45,8 @@ object Engine {
         if (s is State.Failed) throw IllegalStateException(s.msg)
     }
 
+    suspend fun ready() = await()
+
     /** Update the bundled yt-dlp (sites change often, so this matters). */
     suspend fun updateYtDlp(ctx: Context): String = withContext(Dispatchers.IO) {
         await()
@@ -148,16 +150,24 @@ object Engine {
             req.addOption("-x")
             req.addOption("--audio-format", "mp3")
             req.addOption("--audio-quality", "0")
+            req.addOption("--embed-metadata")
         }
-        YoutubeDL.getInstance().execute(req, id) { progress, _, _ ->
-            if (progress >= 0f) onProgress((progress / 100f).coerceIn(0f, 1f))
+        try {
+            YoutubeDL.getInstance().execute(req, id) { progress, _, _ ->
+                if (progress >= 0f) onProgress((progress / 100f).coerceIn(0f, 1f))
+            }
+        } catch (e: Exception) {
+            // A playlist with some unavailable items still yields the rest.
+            if (!all || DownloadCenter.canceled.contains(id) || outputs(tmpDir).isEmpty()) throw e
         }
-        val files = tmpDir.listFiles().orEmpty().filter {
-            it.isFile && !it.name.endsWith(".part") && !it.name.endsWith(".ytdl") && !it.name.endsWith(".temp")
-        }
+        val files = outputs(tmpDir)
         if (files.isEmpty()) throw IllegalStateException("no output file")
-        files.sortedBy { it.name }
+        files
     }
+
+    private fun outputs(dir: File): List<File> = dir.listFiles().orEmpty().filter {
+        it.isFile && !it.name.endsWith(".part") && !it.name.endsWith(".ytdl") && !it.name.endsWith(".temp")
+    }.sortedBy { it.name }
 
     private fun downloadImage(info: MediaInfo, tmpDir: File, onProgress: (Float) -> Unit): File {
         val src = info.imageUrl ?: throw IllegalStateException("no image url")

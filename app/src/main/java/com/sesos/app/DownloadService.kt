@@ -46,7 +46,9 @@ class DownloadService : Service() {
         )
 
         active.incrementAndGet()
-        DownloadCenter.add(DownloadItem(id, info.title, kind))
+        DownloadCenter.add(
+            DownloadItem(id, info.title, kind, url = info.pageUrl, thumbnail = intent.getStringExtra(EX_THUMB))
+        )
         scope.launch {
             val tmp = File(cacheDir, "dl/$id")
             try {
@@ -109,6 +111,7 @@ class DownloadService : Service() {
         const val EX_HEIGHT = "height"
         const val EX_ALL = "all"
         const val EX_IMAGE = "image"
+        const val EX_THUMB = "thumb"
 
         fun start(ctx: Context, info: MediaInfo, kind: Kind, height: Int?, all: Boolean) {
             val i = Intent(ctx, DownloadService::class.java)
@@ -119,6 +122,7 @@ class DownloadService : Service() {
                 .putExtra(EX_HEIGHT, height ?: 0)
                 .putExtra(EX_ALL, all)
                 .putExtra(EX_IMAGE, info.imageUrl)
+                .putExtra(EX_THUMB, info.thumbnail)
             ContextCompat.startForegroundService(ctx, i)
         }
 
