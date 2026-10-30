@@ -77,3 +77,12 @@
 - فشل البناء بـ Conflicting overloads لـ InfoCard وContext.open لأن نسخ الحزمة فوق المستودع لا يحذف SesosScreen.kt القديم
 - الحل: الملف موجود الآن ويحتوي سطر package فقط حتى يستبدل القديم عند النسخ. يمكن حذفه يدويًا لاحقًا
 - درس: عند حذف ملف من المشروع اترك بدله ملفًا فارغًا في الحزمة، أو احذفه يدويًا من المستودع
+
+## مهمة: تصغير حجم التطبيق
+- المطلوب تصغير معقول بدون حذف أي ميزة، لذلك جرى التراجع عن فكرة نسخة lite بدون GeckoView (حُذف مجلدا src/full وsrc/lite وعاد GeckoBrowserActivity.kt وassets/sesos-ext إلى main، وعاد geckoview implementation عاديًا)
+- معظم الحجم محركات أصلية لا تُضغط: GeckoView ثم yt-dlp مع Python ثم ffmpeg. والتوفير هنا في جانب جافا وكوتلن والموارد فقط، لذلك يتوقع أن يكون متواضعًا
+- فُعّل R8 وتقليص الموارد (isMinifyEnabled وisShrinkResources) في proguard-rules.pro: بقاء كل com.yausername وjackson وكل org.mozilla (لأن Gecko ينادي جافا من الكود الأصلي بالاسم) مع dontwarn للمكتبات الاختيارية لـ commons-compress
+- resourceConfigurations للعربية والإنجليزية فقط، واستبعاد ملفات LICENSE وNOTICE من الـ APK
+- مخاطرة معروفة: R8 لم يُختبر. إن فشل البناء بـ Missing class فأضف dontwarn من ملف missing_rules.txt الذي يطبعه اللوج. وإن انهار التطبيق وقت التشغيل فأرسل logcat، ولمقارنة سريعة اجعل الخيارين false
+- بقاء المعماريتين arm64-v8a وarmeabi-v7a كل واحدة في APK مستقل، والتثبيت يكون لواحد فقط
+- نسخ الحزمة فوق المستودع لا يحذف ملفات قديمة. إن كانت نسخة lite طُبّقت سابقًا فيمكن حذف app/src/full وapp/src/lite يدويًا (وجودهما لا يضر لأنه لا توجد نكهات)
